@@ -21,19 +21,19 @@ class DocumentQuerySet(SearchableQuerySetMixin, models.QuerySet):
 
 
 class AbstractDocument(CollectionMember, index.Indexed, models.Model):
-    title = models.CharField(max_length=255, verbose_name=_('title'))
-    file = models.FileField(upload_to='documents', verbose_name=_('file'))
-    created_at = models.DateTimeField(verbose_name=_('created at'), auto_now_add=True)
+    title = models.CharField(max_length=255, verbose_name=_("title"))
+    file = models.FileField(upload_to="documents", verbose_name=_("file"))
+    created_at = models.DateTimeField(verbose_name=_("created at"), auto_now_add=True)
     uploaded_by_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        verbose_name=_('uploaded by user'),
+        verbose_name=_("uploaded by user"),
         null=True,
         blank=True,
         editable=False,
-        on_delete=models.SET_NULL
+        on_delete=models.SET_NULL,
     )
 
-    tags = TaggableManager(help_text=None, blank=True, verbose_name=_('tags'))
+    tags = TaggableManager(help_text=None, blank=True, verbose_name=_("tags"))
 
     file_size = models.PositiveIntegerField(null=True, editable=False)
     # A SHA-1 hash of the file contents
@@ -42,14 +42,17 @@ class AbstractDocument(CollectionMember, index.Indexed, models.Model):
     objects = DocumentQuerySet.as_manager()
 
     search_fields = CollectionMember.search_fields + [
-        index.SearchField('title', partial_match=True, boost=10),
-        index.AutocompleteField('title'),
-        index.FilterField('title'),
-        index.RelatedFields('tags', [
-            index.SearchField('name', partial_match=True, boost=10),
-            index.AutocompleteField('name'),
-        ]),
-        index.FilterField('uploaded_by_user'),
+        index.SearchField("title", partial_match=True, boost=10),
+        index.AutocompleteField("title"),
+        index.FilterField("title"),
+        index.RelatedFields(
+            "tags",
+            [
+                index.SearchField("name", partial_match=True, boost=10),
+                index.AutocompleteField("name"),
+            ],
+        ),
+        index.FilterField("uploaded_by_user"),
     ]
 
     @contextmanager
@@ -61,12 +64,12 @@ class AbstractDocument(CollectionMember, index.Indexed, models.Model):
         if f.closed:
             # Reopen the file
             if self.is_stored_locally():
-                f.open('rb')
+                f.open("rb")
             else:
                 # Some external storage backends don't allow reopening
                 # the file. Get a fresh file instance. #1397
-                storage = self._meta.get_field('file').storage
-                f = storage.open(f.name, 'rb')
+                storage = self._meta.get_field("file").storage
+                f = storage.open(f.name, "rb")
 
             close_file = True
 
@@ -87,7 +90,7 @@ class AbstractDocument(CollectionMember, index.Indexed, models.Model):
                 # File doesn't exist
                 return
 
-            self.save(update_fields=['file_size'])
+            self.save(update_fields=["file_size"])
 
         return self.file_size
 
@@ -95,11 +98,11 @@ class AbstractDocument(CollectionMember, index.Indexed, models.Model):
         self.file_hash = hashlib.sha1(file_contents).hexdigest()
 
     def get_file_hash(self):
-        if self.file_hash == '':
+        if self.file_hash == "":
             with self.open_file() as f:
                 self._set_file_hash(f.read())
 
-            self.save(update_fields=['file_hash'])
+            self.save(update_fields=["file_hash"])
 
         return self.file_hash
 
@@ -116,33 +119,28 @@ class AbstractDocument(CollectionMember, index.Indexed, models.Model):
 
     @property
     def url(self):
-        return reverse('wagtaildocs_serve', args=[self.id, self.filename])
+        return reverse("wagtaildocs_serve", args=[self.id, self.filename])
 
     def get_usage(self):
         return get_object_usage(self)
 
     @property
     def usage_url(self):
-        return reverse('wagtaildocs:document_usage',
-                       args=(self.id,))
+        return reverse("wagtaildocs:document_usage", args=(self.id,))
 
     def is_editable_by_user(self, user):
         from wagtail.documents.permissions import permission_policy
-        return permission_policy.user_has_permission_for_instance(user, 'change', self)
+
+        return permission_policy.user_has_permission_for_instance(user, "change", self)
 
     class Meta:
         abstract = True
-        verbose_name = _('document')
-        verbose_name_plural = _('documents')
+        verbose_name = _("document")
+        verbose_name_plural = _("documents")
 
 
 class Document(AbstractDocument):
-    admin_form_fields = (
-        'title',
-        'file',
-        'collection',
-        'tags'
-    )
+    admin_form_fields = ("title", "file", "collection", "tags")
 
 
 def get_document_model():
@@ -155,19 +153,21 @@ def get_document_model():
     from django.apps import apps
 
     try:
-        app_label, model_name = settings.WAGTAILDOCS_DOCUMENT_MODEL.split('.')
+        app_label, model_name = settings.WAGTAILDOCS_DOCUMENT_MODEL.split(".")
     except AttributeError:
         return Document
     except ValueError:
-        raise ImproperlyConfigured("WAGTAILDOCS_DOCUMENT_MODEL must be of the form 'app_label.model_name'")
+        raise ImproperlyConfigured(
+            "WAGTAILDOCS_DOCUMENT_MODEL must be of the form 'app_label.model_name'"
+        )
 
     document_model = apps.get_model(app_label, model_name)
     if document_model is None:
         raise ImproperlyConfigured(
-            "WAGTAILDOCS_DOCUMENT_MODEL refers to model '%s' that has not been installed" %
-            settings.WAGTAILDOCS_DOCUMENT_MODEL
+            "WAGTAILDOCS_DOCUMENT_MODEL refers to model '%s' that has not been installed"
+            % settings.WAGTAILDOCS_DOCUMENT_MODEL
         )
     return document_model
 
 
-document_served = Signal(providing_args=['request'])
+document_served = Signal(providing_args=["request"])

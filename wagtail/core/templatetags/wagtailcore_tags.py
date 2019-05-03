@@ -17,11 +17,11 @@ def pageurl(context, page):
     Outputs a page's URL as relative (/foo/bar/) if it's within the same site as the
     current page, or absolute (http://example.com/foo/bar/) if not.
     """
-    if not hasattr(page, 'relative_url'):
+    if not hasattr(page, "relative_url"):
         raise ValueError("pageurl tag expected a Page object, got %r" % page)
 
     try:
-        current_site = context['request'].site
+        current_site = context["request"].site
     except (KeyError, AttributeError):
         # request.site not available in the current context; fall back on page.url
         return page.url
@@ -30,7 +30,7 @@ def pageurl(context, page):
     # Site.get_site_root_paths()
     # This avoids page.relative_url having to make a database/cache fetch for this list
     # each time it's called.
-    return page.relative_url(current_site, request=context.get('request'))
+    return page.relative_url(current_site, request=context.get("request"))
 
 
 @register.simple_tag(takes_context=True)
@@ -44,7 +44,7 @@ def slugurl(context, slug):
     """
 
     try:
-        current_site = context['request'].site
+        current_site = context["request"].site
     except (KeyError, AttributeError):
         # No site object found - allow the fallback below to take place.
         page = None
@@ -68,10 +68,10 @@ def wagtail_version():
 @register.simple_tag
 def wagtail_documentation_path():
     major, minor, patch, release, num = VERSION
-    if release == 'final':
-        return 'https://docs.wagtail.io/en/v%s' % __version__
+    if release == "final":
+        return "https://docs.wagtail.io/en/v%s" % __version__
     else:
-        return 'https://docs.wagtail.io/en/latest'
+        return "https://docs.wagtail.io/en/latest"
 
 
 @register.simple_tag
@@ -85,14 +85,18 @@ def richtext(value):
         # passing a RichText value through the |richtext filter should have no effect
         return value
     elif value is None:
-        html = ''
+        html = ""
     else:
         if isinstance(value, str):
             html = expand_db_html(value)
         else:
-            raise TypeError("'richtext' template filter received an invalid value; expected string, got {}.".format(type(value)))
+            raise TypeError(
+                "'richtext' template filter received an invalid value; expected string, got {}.".format(
+                    type(value)
+                )
+            )
 
-    return mark_safe('<div class="rich-text">' + html + '</div>')
+    return mark_safe('<div class="rich-text">' + html + "</div>")
 
 
 class IncludeBlockNode(template.Node):
@@ -105,9 +109,9 @@ class IncludeBlockNode(template.Node):
         try:
             value = self.block_var.resolve(context)
         except template.VariableDoesNotExist:
-            return ''
+            return ""
 
-        if hasattr(value, 'render_as_block'):
+        if hasattr(value, "render_as_block"):
             if self.use_parent_context:
                 new_context = context.flatten()
             else:
@@ -134,22 +138,26 @@ def include_block(parser, token):
         tag_name = tokens.pop(0)
         block_var_token = tokens.pop(0)
     except IndexError:
-        raise template.TemplateSyntaxError("%r tag requires at least one argument" % tag_name)
+        raise template.TemplateSyntaxError(
+            "%r tag requires at least one argument" % tag_name
+        )
 
     block_var = parser.compile_filter(block_var_token)
 
-    if tokens and tokens[0] == 'with':
+    if tokens and tokens[0] == "with":
         tokens.pop(0)
         extra_context = token_kwargs(tokens, parser)
     else:
         extra_context = None
 
     use_parent_context = True
-    if tokens and tokens[0] == 'only':
+    if tokens and tokens[0] == "only":
         tokens.pop(0)
         use_parent_context = False
 
     if tokens:
-        raise template.TemplateSyntaxError("Unexpected argument to %r tag: %r" % (tag_name, tokens[0]))
+        raise template.TemplateSyntaxError(
+            "Unexpected argument to %r tag: %r" % (tag_name, tokens[0])
+        )
 
     return IncludeBlockNode(block_var, extra_context, use_parent_context)

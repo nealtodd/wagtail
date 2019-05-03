@@ -8,11 +8,23 @@ from wagtail.core import hooks
 from wagtail.core.models import Page
 
 from .helpers import (
-    AdminURLHelper, ButtonHelper, PageAdminURLHelper, PageButtonHelper, PagePermissionHelper,
-    PermissionHelper)
+    AdminURLHelper,
+    ButtonHelper,
+    PageAdminURLHelper,
+    PageButtonHelper,
+    PagePermissionHelper,
+    PermissionHelper,
+)
 from .menus import GroupMenuItem, ModelAdminMenuItem, SubMenu
 from .mixins import ThumbnailMixin  # NOQA
-from .views import ChooseParentView, CreateView, DeleteView, EditView, IndexView, InspectView
+from .views import (
+    ChooseParentView,
+    CreateView,
+    DeleteView,
+    EditView,
+    IndexView,
+    InspectView,
+)
 
 
 class WagtailRegisterable:
@@ -20,22 +32,23 @@ class WagtailRegisterable:
     Base class, providing a more convenient way for ModelAdmin or
     ModelAdminGroup instances to be registered with Wagtail's admin area.
     """
+
     add_to_settings_menu = False
     exclude_from_explorer = False
 
     def register_with_wagtail(self):
-
-        @hooks.register('register_permissions')
+        @hooks.register("register_permissions")
         def register_permissions():
             return self.get_permissions_for_registration()
 
-        @hooks.register('register_admin_urls')
+        @hooks.register("register_admin_urls")
         def register_admin_urls():
             return self.get_admin_urls_for_registration()
 
         menu_hook = (
-            'register_settings_menu_item' if self.add_to_settings_menu else
-            'register_admin_menu_item'
+            "register_settings_menu_item"
+            if self.add_to_settings_menu
+            else "register_admin_menu_item"
         )
 
         @hooks.register(menu_hook)
@@ -46,10 +59,12 @@ class WagtailRegisterable:
         # operation, so only attach that hook if we specifically opt into it
         # by returning True from will_modify_explorer_page_queryset
         if self.will_modify_explorer_page_queryset():
-            @hooks.register('construct_explorer_page_queryset')
+
+            @hooks.register("construct_explorer_page_queryset")
             def construct_explorer_page_queryset(parent_page, queryset, request):
                 return self.modify_explorer_page_queryset(
-                    parent_page, queryset, request)
+                    parent_page, queryset, request
+                )
 
     def will_modify_explorer_page_queryset(self):
         return False
@@ -68,12 +83,12 @@ class ModelAdmin(WagtailRegisterable):
     menu_label = None
     menu_icon = None
     menu_order = None
-    list_display = ('__str__',)
+    list_display = ("__str__",)
     list_display_add_buttons = None
     inspect_view_fields = []
     inspect_view_fields_exclude = []
     inspect_view_enabled = False
-    empty_value_display = '-'
+    empty_value_display = "-"
     list_filter = ()
     list_select_related = False
     list_per_page = 100
@@ -86,12 +101,12 @@ class ModelAdmin(WagtailRegisterable):
     inspect_view_class = InspectView
     delete_view_class = DeleteView
     choose_parent_view_class = ChooseParentView
-    index_template_name = ''
-    create_template_name = ''
-    edit_template_name = ''
-    inspect_template_name = ''
-    delete_template_name = ''
-    choose_parent_template_name = ''
+    index_template_name = ""
+    create_template_name = ""
+    edit_template_name = ""
+    inspect_template_name = ""
+    delete_template_name = ""
+    choose_parent_template_name = ""
     permission_helper_class = None
     url_helper_class = None
     button_helper_class = None
@@ -109,13 +124,15 @@ class ModelAdmin(WagtailRegisterable):
         """
         if not self.model or not issubclass(self.model, Model):
             raise ImproperlyConfigured(
-                u"The model attribute on your '%s' class must be set, and "
-                "must be a valid Django model." % self.__class__.__name__)
+                "The model attribute on your '%s' class must be set, and "
+                "must be a valid Django model." % self.__class__.__name__
+            )
         self.opts = self.model._meta
         self.is_pagemodel = issubclass(self.model, Page)
         self.parent = parent
         self.permission_helper = self.get_permission_helper_class()(
-            self.model, self.inspect_view_enabled)
+            self.model, self.inspect_view_enabled
+        )
         self.url_helper = self.get_url_helper_class()(self.model)
 
     def get_permission_helper_class(self):
@@ -163,8 +180,8 @@ class ModelAdmin(WagtailRegisterable):
         if self.menu_icon:
             return self.menu_icon
         if self.is_pagemodel:
-            return 'doc-full-inverse'
-        return 'snippet'
+            return "doc-full-inverse"
+        return "snippet"
 
     def get_menu_order(self):
         """
@@ -189,8 +206,7 @@ class ModelAdmin(WagtailRegisterable):
         buttons should be added. Defaults to the first item from
         get_list_display()
         """
-        return self.list_display_add_buttons or self.get_list_display(
-            request)[0]
+        return self.list_display_add_buttons or self.get_list_display(request)[0]
 
     def get_empty_value_display(self, field_name=None):
         """
@@ -265,7 +281,7 @@ class ModelAdmin(WagtailRegisterable):
         return self.form_fields_exclude
 
     def get_index_view_extra_css(self):
-        css = ['wagtailmodeladmin/css/index.css']
+        css = ["wagtailmodeladmin/css/index.css"]
         css.extend(self.index_view_extra_css)
         return css
 
@@ -297,8 +313,7 @@ class ModelAdmin(WagtailRegisterable):
             for f in self.model._meta.get_fields():
                 if f.name not in self.inspect_view_fields_exclude:
                     if f.concrete and (
-                        not f.is_relation
-                        or (not f.auto_created and f.related_model)
+                        not f.is_relation or (not f.auto_created and f.related_model)
                     ):
                         found_fields.append(f.name)
             return found_fields
@@ -310,7 +325,7 @@ class ModelAdmin(WagtailRegisterable):
         the assigned model. The view class used can be overridden by changing
         the 'index_view_class' attribute.
         """
-        kwargs = {'model_admin': self}
+        kwargs = {"model_admin": self}
         view_class = self.index_view_class
         return view_class.as_view(**kwargs)(request)
 
@@ -321,7 +336,7 @@ class ModelAdmin(WagtailRegisterable):
         assigned model extends 'Page'. The view class used can be overridden by
         changing the 'create_view_class' attribute.
         """
-        kwargs = {'model_admin': self}
+        kwargs = {"model_admin": self}
         view_class = self.create_view_class
         return view_class.as_view(**kwargs)(request)
 
@@ -333,7 +348,7 @@ class ModelAdmin(WagtailRegisterable):
         The view class used can be overridden by changing the
         'choose_parent_view_class' attribute.
         """
-        kwargs = {'model_admin': self}
+        kwargs = {"model_admin": self}
         view_class = self.choose_parent_view_class
         return view_class.as_view(**kwargs)(request)
 
@@ -343,7 +358,7 @@ class ModelAdmin(WagtailRegisterable):
         the assigned model. The view class used can be overridden by changing
         the 'inspect_view_class' attribute.
         """
-        kwargs = {'model_admin': self, 'instance_pk': instance_pk}
+        kwargs = {"model_admin": self, "instance_pk": instance_pk}
         view_class = self.inspect_view_class
         return view_class.as_view(**kwargs)(request)
 
@@ -354,7 +369,7 @@ class ModelAdmin(WagtailRegisterable):
         model extends 'Page'. The view class used can be overridden by changing
         the  'edit_view_class' attribute.
         """
-        kwargs = {'model_admin': self, 'instance_pk': instance_pk}
+        kwargs = {"model_admin": self, "instance_pk": instance_pk}
         view_class = self.edit_view_class
         return view_class.as_view(**kwargs)(request)
 
@@ -366,11 +381,11 @@ class ModelAdmin(WagtailRegisterable):
         used can be overridden by changing the 'delete_view_class'
         attribute.
         """
-        kwargs = {'model_admin': self, 'instance_pk': instance_pk}
+        kwargs = {"model_admin": self, "instance_pk": instance_pk}
         view_class = self.delete_view_class
         return view_class.as_view(**kwargs)(request)
 
-    def get_templates(self, action='index'):
+    def get_templates(self, action="index"):
         """
         Utility funtion that provides a list of templates to try for a given
         view, when the template isn't overridden by one of the template
@@ -379,9 +394,9 @@ class ModelAdmin(WagtailRegisterable):
         app_label = self.opts.app_label.lower()
         model_name = self.opts.model_name.lower()
         return [
-            'modeladmin/%s/%s/%s.html' % (app_label, model_name, action),
-            'modeladmin/%s/%s.html' % (app_label, action),
-            'modeladmin/%s.html' % (action,),
+            "modeladmin/%s/%s/%s.html" % (app_label, model_name, action),
+            "modeladmin/%s/%s.html" % (app_label, action),
+            "modeladmin/%s.html" % (action,),
         ]
 
     def get_index_template(self):
@@ -390,7 +405,7 @@ class ModelAdmin(WagtailRegisterable):
         template is specified by the 'index_template_name' attribute, that will
         be used. Otherwise, a list of preferred template names are returned.
         """
-        return self.index_template_name or self.get_templates('index')
+        return self.index_template_name or self.get_templates("index")
 
     def get_choose_parent_template(self):
         """
@@ -399,8 +414,7 @@ class ModelAdmin(WagtailRegisterable):
         that will be used. Otherwise, a list of preferred template names are
         returned.
         """
-        return self.choose_parent_template_name or self.get_templates(
-            'choose_parent')
+        return self.choose_parent_template_name or self.get_templates("choose_parent")
 
     def get_inspect_template(self):
         """
@@ -409,7 +423,7 @@ class ModelAdmin(WagtailRegisterable):
         will be used. Otherwise, a list of preferred template names are
         returned.
         """
-        return self.inspect_template_name or self.get_templates('inspect')
+        return self.inspect_template_name or self.get_templates("inspect")
 
     def get_create_template(self):
         """
@@ -418,7 +432,7 @@ class ModelAdmin(WagtailRegisterable):
         that will be used. Otherwise, a list of preferred template names are
         returned.
         """
-        return self.create_template_name or self.get_templates('create')
+        return self.create_template_name or self.get_templates("create")
 
     def get_edit_template(self):
         """
@@ -426,7 +440,7 @@ class ModelAdmin(WagtailRegisterable):
         is specified by the 'edit_template_name' attribute, that will be used.
         Otherwise, a list of preferred template names are returned.
         """
-        return self.edit_template_name or self.get_templates('edit')
+        return self.edit_template_name or self.get_templates("edit")
 
     def get_delete_template(self):
         """
@@ -435,7 +449,7 @@ class ModelAdmin(WagtailRegisterable):
         attribute, that will be used. Otherwise, a list of preferred template
         names are returned.
         """
-        return self.delete_template_name or self.get_templates('delete')
+        return self.delete_template_name or self.get_templates("delete")
 
     def get_menu_item(self, order=None):
         """
@@ -452,6 +466,7 @@ class ModelAdmin(WagtailRegisterable):
         if the model isn't a Page model, and isn't registered as a Snippet
         """
         from wagtail.snippets.models import SNIPPET_MODELS
+
         if not self.is_pagemodel and self.model not in SNIPPET_MODELS:
             return self.permission_helper.get_all_model_permissions()
         return Permission.objects.none()
@@ -462,35 +477,47 @@ class ModelAdmin(WagtailRegisterable):
         our the views that class offers.
         """
         urls = (
-            url(self.url_helper.get_action_url_pattern('index'),
+            url(
+                self.url_helper.get_action_url_pattern("index"),
                 self.index_view,
-                name=self.url_helper.get_action_url_name('index')),
-            url(self.url_helper.get_action_url_pattern('create'),
+                name=self.url_helper.get_action_url_name("index"),
+            ),
+            url(
+                self.url_helper.get_action_url_pattern("create"),
                 self.create_view,
-                name=self.url_helper.get_action_url_name('create')),
-            url(self.url_helper.get_action_url_pattern('edit'),
+                name=self.url_helper.get_action_url_name("create"),
+            ),
+            url(
+                self.url_helper.get_action_url_pattern("edit"),
                 self.edit_view,
-                name=self.url_helper.get_action_url_name('edit')),
-            url(self.url_helper.get_action_url_pattern('delete'),
+                name=self.url_helper.get_action_url_name("edit"),
+            ),
+            url(
+                self.url_helper.get_action_url_pattern("delete"),
                 self.delete_view,
-                name=self.url_helper.get_action_url_name('delete')),
+                name=self.url_helper.get_action_url_name("delete"),
+            ),
         )
         if self.inspect_view_enabled:
             urls = urls + (
-                url(self.url_helper.get_action_url_pattern('inspect'),
+                url(
+                    self.url_helper.get_action_url_pattern("inspect"),
                     self.inspect_view,
-                    name=self.url_helper.get_action_url_name('inspect')),
+                    name=self.url_helper.get_action_url_name("inspect"),
+                ),
             )
         if self.is_pagemodel:
             urls = urls + (
-                url(self.url_helper.get_action_url_pattern('choose_parent'),
+                url(
+                    self.url_helper.get_action_url_pattern("choose_parent"),
                     self.choose_parent_view,
-                    name=self.url_helper.get_action_url_name('choose_parent')),
+                    name=self.url_helper.get_action_url_name("choose_parent"),
+                ),
             )
         return urls
 
     def will_modify_explorer_page_queryset(self):
-        return (self.is_pagemodel and self.exclude_from_explorer)
+        return self.is_pagemodel and self.exclude_from_explorer
 
     def modify_explorer_page_queryset(self, parent_page, queryset, request):
         if self.is_pagemodel and self.exclude_from_explorer:
@@ -504,6 +531,7 @@ class ModelAdminGroup(WagtailRegisterable):
     SnippetModelAdmin instances. Creates a menu item with a SubMenu for
     accessing the listing pages of those instances
     """
+
     items = ()
     menu_label = None
     menu_order = None
@@ -525,10 +553,10 @@ class ModelAdminGroup(WagtailRegisterable):
     def get_app_label_from_subitems(self):
         for instance in self.modeladmin_instances:
             return instance.opts.app_label.title()
-        return ''
+        return ""
 
     def get_menu_icon(self):
-        return self.menu_icon or 'icon-folder-open-inverse'
+        return self.menu_icon or "icon-folder-open-inverse"
 
     def get_menu_order(self):
         return self.menu_order or 999
@@ -581,7 +609,8 @@ class ModelAdminGroup(WagtailRegisterable):
     def modify_explorer_page_queryset(self, parent_page, queryset, request):
         for instance in self.modeladmin_instances:
             queryset = instance.modify_explorer_page_queryset(
-                parent_page, queryset, request)
+                parent_page, queryset, request
+            )
         return queryset
 
 

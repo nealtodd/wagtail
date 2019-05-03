@@ -28,7 +28,7 @@ def image(parser, token):
     is_valid = True
 
     for bit in bits:
-        if bit == 'as':
+        if bit == "as":
             # token is of the form {% image self.photo max-320x200 as img %}
             as_context = True
         elif as_context:
@@ -39,8 +39,10 @@ def image(parser, token):
                 is_valid = False
         else:
             try:
-                name, value = bit.split('=')
-                attrs[name] = parser.compile_filter(value)  # setup to resolve context variables as value
+                name, value = bit.split("=")
+                attrs[name] = parser.compile_filter(
+                    value
+                )  # setup to resolve context variables as value
             except ValueError:
                 if allowed_filter_pattern.match(bit):
                     filter_specs.append(bit)
@@ -71,7 +73,12 @@ def image(parser, token):
         )
 
     if is_valid:
-        return ImageNode(image_expr, '|'.join(filter_specs), attrs=attrs, output_var_name=output_var_name)
+        return ImageNode(
+            image_expr,
+            "|".join(filter_specs),
+            attrs=attrs,
+            output_var_name=output_var_name,
+        )
     else:
         raise template.TemplateSyntaxError(
             "'image' tag should be of the form {% image self.photo max-320x200 [ custom-attr=\"value\" ... ] %} "
@@ -94,17 +101,17 @@ class ImageNode(template.Node):
         try:
             image = self.image_expr.resolve(context)
         except template.VariableDoesNotExist:
-            return ''
+            return ""
 
         if not image:
-            return ''
+            return ""
 
         rendition = get_rendition_or_not_found(image, self.filter)
 
         if self.output_var_name:
             # return the rendition object in the given variable
             context[self.output_var_name] = rendition
-            return ''
+            return ""
         else:
             # render the rendition's image tag now
             resolved_attrs = {}
@@ -114,11 +121,13 @@ class ImageNode(template.Node):
 
 
 @register.simple_tag()
-def image_url(image, filter_spec, viewname='wagtailimages_serve'):
+def image_url(image, filter_spec, viewname="wagtailimages_serve"):
     try:
         return generate_image_url(image, filter_spec, viewname)
     except NoReverseMatch:
         raise ImproperlyConfigured(
-            "'image_url' tag requires the " + viewname + " view to be configured. Please see "
+            "'image_url' tag requires the "
+            + viewname
+            + " view to be configured. Please see "
             "https://docs.wagtail.io/en/stable/advanced_topics/images/image_serve_view.html#setup for instructions."
         )

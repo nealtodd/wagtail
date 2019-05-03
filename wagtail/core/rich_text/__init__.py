@@ -1,7 +1,11 @@
 from django.utils.safestring import mark_safe
 
 from wagtail.core.rich_text.feature_registry import FeatureRegistry
-from wagtail.core.rich_text.rewriters import EmbedRewriter, LinkRewriter, MultiRuleRewriter
+from wagtail.core.rich_text.rewriters import (
+    EmbedRewriter,
+    LinkRewriter,
+    MultiRuleRewriter,
+)
 
 
 features = FeatureRegistry()
@@ -23,9 +27,9 @@ def expand_db_html(html):
     if FRONTEND_REWRITER is None:
         embed_rules = features.get_embed_types()
         link_rules = features.get_link_types()
-        FRONTEND_REWRITER = MultiRuleRewriter([
-            LinkRewriter(link_rules), EmbedRewriter(embed_rules)
-        ])
+        FRONTEND_REWRITER = MultiRuleRewriter(
+            [LinkRewriter(link_rules), EmbedRewriter(embed_rules)]
+        )
 
     return FRONTEND_REWRITER(html)
 
@@ -37,15 +41,17 @@ class RichText:
     and renders to the front-end HTML rendering.
     Used as the native value of a wagtailcore.blocks.field_block.RichTextBlock.
     """
+
     def __init__(self, source):
-        self.source = (source or '')
+        self.source = source or ""
 
     def __html__(self):
-        return '<div class="rich-text">' + expand_db_html(self.source) + '</div>'
+        return '<div class="rich-text">' + expand_db_html(self.source) + "</div>"
 
     def __str__(self):
         return mark_safe(self.__html__())
 
     def __bool__(self):
         return bool(self.source)
+
     __nonzero__ = __bool__

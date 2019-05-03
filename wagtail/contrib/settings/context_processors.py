@@ -5,6 +5,7 @@ class SettingsProxy(dict):
     """
     Get a SettingModuleProxy for an app using proxy['app_label']
     """
+
     def __init__(self, site):
         self.site = site
 
@@ -13,13 +14,14 @@ class SettingsProxy(dict):
         return value
 
     def __str__(self):
-        return 'SettingsProxy'
+        return "SettingsProxy"
 
 
 class SettingModuleProxy(dict):
     """
     Get a setting instance using proxy['modelname']
     """
+
     def __init__(self, site, app_label):
         self.site = site
         self.app_label = app_label
@@ -45,11 +47,11 @@ class SettingModuleProxy(dict):
         return Model.for_site(self.site)
 
     def __str__(self):
-        return 'SettingsModuleProxy({0})'.format(self.app_label)
+        return "SettingsModuleProxy({0})".format(self.app_label)
 
 
 def settings(request):
-    site = getattr(request, 'site', None)
+    site = getattr(request, "site", None)
     if site is None:
         # Can't assume SiteMiddleware already executed
         # (e.g. middleware rendering a template before that)
@@ -57,4 +59,4 @@ def settings(request):
         # objects that don't have a request.site.
         return {}
     else:
-        return {'settings': SettingsProxy(site)}
+        return {"settings": SettingsProxy(site)}

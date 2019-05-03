@@ -38,11 +38,16 @@ class DoNothingOperation(Operation):
 
 
 class FillOperation(Operation):
-    vary_fields = ('focal_point_width', 'focal_point_height', 'focal_point_x', 'focal_point_y')
+    vary_fields = (
+        "focal_point_width",
+        "focal_point_height",
+        "focal_point_x",
+        "focal_point_y",
+    )
 
     def construct(self, size, *extra):
         # Get width and height
-        width_str, height_str = size.split('x')
+        width_str, height_str = size.split("x")
         self.width = int(width_str)
         self.height = int(height_str)
 
@@ -50,7 +55,7 @@ class FillOperation(Operation):
         self.crop_closeness = 0
 
         for extra_part in extra:
-            if extra_part.startswith('c'):
+            if extra_part.startswith("c"):
                 self.crop_closeness = int(extra_part[1:])
             else:
                 raise ValueError("Unrecognised filter spec part: %s" % extra_part)
@@ -81,7 +86,9 @@ class FillOperation(Operation):
         # Use crop closeness to zoom in
         if focal_point is not None:
             # Get crop min
-            crop_min_scale = max(focal_point.width, focal_point.height * crop_aspect_ratio)
+            crop_min_scale = max(
+                focal_point.width, focal_point.height * crop_aspect_ratio
+            )
             crop_min_width = crop_min_scale
             crop_min_height = crop_min_scale / crop_aspect_ratio
 
@@ -89,8 +96,11 @@ class FillOperation(Operation):
             if not crop_min_scale >= crop_max_scale:
                 # Calculate max crop closeness to prevent upscaling
                 max_crop_closeness = max(
-                    1 - (self.width - crop_min_width) / (crop_max_width - crop_min_width),
-                    1 - (self.height - crop_min_height) / (crop_max_height - crop_min_height)
+                    1
+                    - (self.width - crop_min_width) / (crop_max_width - crop_min_width),
+                    1
+                    - (self.height - crop_min_height)
+                    / (crop_max_height - crop_min_height),
                 )
 
                 # Apply max crop closeness
@@ -98,8 +108,14 @@ class FillOperation(Operation):
 
                 if 1 >= crop_closeness >= 0:
                     # Get crop width and height
-                    crop_width = crop_max_width + (crop_min_width - crop_max_width) * crop_closeness
-                    crop_height = crop_max_height + (crop_min_height - crop_max_height) * crop_closeness
+                    crop_width = (
+                        crop_max_width
+                        + (crop_min_width - crop_max_width) * crop_closeness
+                    )
+                    crop_height = (
+                        crop_max_height
+                        + (crop_min_height - crop_max_height) * crop_closeness
+                    )
 
         # Find focal point UV
         if focal_point is not None:
@@ -146,7 +162,7 @@ class FillOperation(Operation):
 class MinMaxOperation(Operation):
     def construct(self, size):
         # Get width and height
-        width_str, height_str = size.split('x')
+        width_str, height_str = size.split("x")
         self.width = int(width_str)
         self.height = int(height_str)
 
@@ -156,7 +172,7 @@ class MinMaxOperation(Operation):
         horz_scale = self.width / image_width
         vert_scale = self.height / image_height
 
-        if self.method == 'min':
+        if self.method == "min":
             if image_width <= self.width or image_height <= self.height:
                 return
 
@@ -167,7 +183,7 @@ class MinMaxOperation(Operation):
                 width = int(image_width * vert_scale)
                 height = self.height
 
-        elif self.method == 'max':
+        elif self.method == "max":
             if image_width <= self.width and image_height <= self.height:
                 return
 
@@ -192,7 +208,7 @@ class WidthHeightOperation(Operation):
     def run(self, willow, image, env):
         image_width, image_height = willow.get_size()
 
-        if self.method == 'width':
+        if self.method == "width":
             if image_width <= self.size:
                 return
 
@@ -201,7 +217,7 @@ class WidthHeightOperation(Operation):
             width = self.size
             height = int(image_height * scale)
 
-        elif self.method == 'height':
+        elif self.method == "height":
             if image_height <= self.size:
                 return
 
@@ -239,18 +255,18 @@ class JPEGQualityOperation(Operation):
             raise ValueError("JPEG quality must not be higher than 100")
 
     def run(self, willow, image, env):
-        env['jpeg-quality'] = self.quality
+        env["jpeg-quality"] = self.quality
 
 
 class FormatOperation(Operation):
     def construct(self, fmt):
         self.format = fmt
 
-        if self.format not in ['jpeg', 'png', 'gif']:
+        if self.format not in ["jpeg", "png", "gif"]:
             raise ValueError("Format must be either 'jpeg', 'png' or 'gif'")
 
     def run(self, willow, image, env):
-        env['output-format'] = self.format
+        env["output-format"] = self.format
 
 
 class BackgroundColorOperation(Operation):

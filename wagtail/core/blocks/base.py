@@ -13,7 +13,14 @@ from django.utils.text import capfirst
 # return a SafeText, not SafeBytes; necessary so that it doesn't get re-encoded when the template engine
 # calls force_text, which would cause it to lose its 'safe' flag
 
-__all__ = ['BaseBlock', 'Block', 'BoundBlock', 'DeclarativeSubBlocksMetaclass', 'BlockWidget', 'BlockField']
+__all__ = [
+    "BaseBlock",
+    "Block",
+    "BoundBlock",
+    "DeclarativeSubBlocksMetaclass",
+    "BlockWidget",
+    "BlockField",
+]
 
 
 # =========================================
@@ -23,30 +30,31 @@ __all__ = ['BaseBlock', 'Block', 'BoundBlock', 'DeclarativeSubBlocksMetaclass', 
 
 class BaseBlock(type):
     def __new__(mcs, name, bases, attrs):
-        meta_class = attrs.pop('Meta', None)
+        meta_class = attrs.pop("Meta", None)
 
         cls = super(BaseBlock, mcs).__new__(mcs, name, bases, attrs)
 
         # Get all the Meta classes from all the bases
-        meta_class_bases = [meta_class] + [getattr(base, '_meta_class', None)
-                                           for base in bases]
+        meta_class_bases = [meta_class] + [
+            getattr(base, "_meta_class", None) for base in bases
+        ]
         meta_class_bases = tuple(filter(bool, meta_class_bases))
-        cls._meta_class = type(str(name + 'Meta'), meta_class_bases, {})
+        cls._meta_class = type(str(name + "Meta"), meta_class_bases, {})
 
         return cls
 
 
 class Block(metaclass=BaseBlock):
-    name = ''
+    name = ""
     creation_counter = 0
 
-    TEMPLATE_VAR = 'value'
+    TEMPLATE_VAR = "value"
 
     class Meta:
         label = None
         icon = "placeholder"
         classname = None
-        group = ''
+        group = ""
 
     """
     Setting a 'dependencies' list serves as a shortcut for the common case where a complex block type
@@ -82,8 +90,10 @@ class Block(metaclass=BaseBlock):
         return media
 
     def all_html_declarations(self):
-        declarations = filter(bool, [block.html_declarations() for block in self.all_blocks()])
-        return mark_safe('\n'.join(declarations))
+        declarations = filter(
+            bool, [block.html_declarations() for block in self.all_blocks()]
+        )
+        return mark_safe("\n".join(declarations))
 
     def __init__(self, **kwargs):
         self.meta = self._meta_class()
@@ -94,14 +104,14 @@ class Block(metaclass=BaseBlock):
         # Increase the creation counter, and save our local copy.
         self.creation_counter = Block.creation_counter
         Block.creation_counter += 1
-        self.definition_prefix = 'blockdef-%d' % self.creation_counter
+        self.definition_prefix = "blockdef-%d" % self.creation_counter
 
-        self.label = self.meta.label or ''
+        self.label = self.meta.label or ""
 
     def set_name(self, name):
         self.name = name
         if not self.meta.label:
-            self.label = capfirst(force_text(name).replace('_', ' '))
+            self.label = capfirst(force_text(name).replace("_", " "))
 
     @property
     def media(self):
@@ -121,7 +131,7 @@ class Block(metaclass=BaseBlock):
         (More precisely, they must either be definition_prefix itself, or begin with definition_prefix
         followed by a '-' character)
         """
-        return ''
+        return ""
 
     def js_initializer(self):
         """
@@ -135,14 +145,14 @@ class Block(metaclass=BaseBlock):
         """
         return None
 
-    def render_form(self, value, prefix='', errors=None):
+    def render_form(self, value, prefix="", errors=None):
         """
         Render the HTML for this block with 'value' as its content.
         """
-        raise NotImplementedError('%s.render_form' % self.__class__)
+        raise NotImplementedError("%s.render_form" % self.__class__)
 
     def value_from_datadict(self, data, files, prefix):
-        raise NotImplementedError('%s.value_from_datadict' % self.__class__)
+        raise NotImplementedError("%s.value_from_datadict" % self.__class__)
 
     def value_omitted_from_data(self, data, files, name):
         """
@@ -178,7 +188,7 @@ class Block(metaclass=BaseBlock):
         (new list items, for example). This will have a prefix of '__PREFIX__' (to be dynamically replaced with
         a real prefix when it's inserted into the page) and a value equal to the block's default value.
         """
-        return self.bind(self.get_default(), '__PREFIX__')
+        return self.bind(self.get_default(), "__PREFIX__")
 
     def clean(self, value):
         """
@@ -215,10 +225,7 @@ class Block(metaclass=BaseBlock):
         """
 
         context = parent_context or {}
-        context.update({
-            'self': value,
-            self.TEMPLATE_VAR: value,
-        })
+        context.update({"self": value, self.TEMPLATE_VAR: value})
         return context
 
     def get_template(self, context=None):
@@ -226,7 +233,7 @@ class Block(metaclass=BaseBlock):
         Return the template to use for rendering the block if specified on meta class.
         This extraction was added to make dynamic templates possible if you override this method
         """
-        return getattr(self.meta, 'template', None)
+        return getattr(self.meta, "template", None)
 
     def render(self, value, context=None):
         """
@@ -279,36 +286,44 @@ class Block(metaclass=BaseBlock):
         """
         errors = []
         if not self.name:
-            errors.append(checks.Error(
-                "Block name %r is invalid" % self.name,
-                hint="Block name cannot be empty",
-                obj=kwargs.get('field', self),
-                id='wagtailcore.E001',
-            ))
+            errors.append(
+                checks.Error(
+                    "Block name %r is invalid" % self.name,
+                    hint="Block name cannot be empty",
+                    obj=kwargs.get("field", self),
+                    id="wagtailcore.E001",
+                )
+            )
 
-        if ' ' in self.name:
-            errors.append(checks.Error(
-                "Block name %r is invalid" % self.name,
-                hint="Block names cannot contain spaces",
-                obj=kwargs.get('field', self),
-                id='wagtailcore.E001',
-            ))
+        if " " in self.name:
+            errors.append(
+                checks.Error(
+                    "Block name %r is invalid" % self.name,
+                    hint="Block names cannot contain spaces",
+                    obj=kwargs.get("field", self),
+                    id="wagtailcore.E001",
+                )
+            )
 
-        if '-' in self.name:
-            errors.append(checks.Error(
-                "Block name %r is invalid" % self.name,
-                "Block names cannot contain dashes",
-                obj=kwargs.get('field', self),
-                id='wagtailcore.E001',
-            ))
+        if "-" in self.name:
+            errors.append(
+                checks.Error(
+                    "Block name %r is invalid" % self.name,
+                    "Block names cannot contain dashes",
+                    obj=kwargs.get("field", self),
+                    id="wagtailcore.E001",
+                )
+            )
 
         if self.name and self.name[0].isdigit():
-            errors.append(checks.Error(
-                "Block name %r is invalid" % self.name,
-                "Block names cannot begin with a digit",
-                obj=kwargs.get('field', self),
-                id='wagtailcore.E001',
-            ))
+            errors.append(
+                checks.Error(
+                    "Block name %r is invalid" % self.name,
+                    "Block names cannot begin with a digit",
+                    obj=kwargs.get("field", self),
+                    id="wagtailcore.E001",
+                )
+            )
 
         return errors
 
@@ -340,21 +355,17 @@ class Block(metaclass=BaseBlock):
                 "Could not find object %s in %s.\n"
                 "Please note that you cannot serialize things like inner "
                 "classes. Please move the object into the main module "
-                "body to use migrations.\n"
-                % (name, module_name))
+                "body to use migrations.\n" % (name, module_name)
+            )
 
         # if the module defines a DECONSTRUCT_ALIASES dictionary, see if the class has an entry in there;
         # if so, use that instead of the real path
         try:
             path = module.DECONSTRUCT_ALIASES[self.__class__]
         except (AttributeError, KeyError):
-            path = '%s.%s' % (module_name, name)
+            path = "%s.%s" % (module_name, name)
 
-        return (
-            path,
-            self._constructor_args[0],
-            self._constructor_args[1],
-        )
+        return (path, self._constructor_args[0], self._constructor_args[1])
 
     def __eq__(self, other):
         """
@@ -442,6 +453,7 @@ class DeclarativeSubBlocksMetaclass(BaseBlock):
     Metaclass that collects sub-blocks declared on the base classes.
     (cheerfully stolen from https://github.com/django/django/blob/master/django/forms/forms.py)
     """
+
     def __new__(mcs, name, bases, attrs):
         # Collect sub-blocks declared on the current class.
         # These are available on the class as `declared_blocks`
@@ -452,17 +464,18 @@ class DeclarativeSubBlocksMetaclass(BaseBlock):
                 value.set_name(key)
                 attrs.pop(key)
         current_blocks.sort(key=lambda x: x[1].creation_counter)
-        attrs['declared_blocks'] = collections.OrderedDict(current_blocks)
+        attrs["declared_blocks"] = collections.OrderedDict(current_blocks)
 
-        new_class = (super(DeclarativeSubBlocksMetaclass, mcs).__new__(
-            mcs, name, bases, attrs))
+        new_class = super(DeclarativeSubBlocksMetaclass, mcs).__new__(
+            mcs, name, bases, attrs
+        )
 
         # Walk through the MRO, collecting all inherited sub-blocks, to make
         # the combined `base_blocks`.
         base_blocks = collections.OrderedDict()
         for base in reversed(new_class.__mro__):
             # Collect sub-blocks from base class.
-            if hasattr(base, 'declared_blocks'):
+            if hasattr(base, "declared_blocks"):
                 base_blocks.update(base.declared_blocks)
 
             # Field shadowing.
@@ -477,6 +490,7 @@ class DeclarativeSubBlocksMetaclass(BaseBlock):
 # ========================
 # django.forms integration
 # ========================
+
 
 class BlockWidget(forms.Widget):
     """Wraps a block object as a widget so that it can be incorporated into a Django form"""
@@ -496,13 +510,18 @@ class BlockWidget(forms.Widget):
                     initializer('%s');
                 })
                 </script>
-            """ % (js_initializer, name)
+            """ % (
+                js_initializer,
+                name,
+            )
         else:
-            js_snippet = ''
+            js_snippet = ""
         return mark_safe(bound_block.render_form() + js_snippet)
 
     def render(self, name, value, attrs=None, renderer=None):
-        return self.render_with_errors(name, value, attrs=attrs, errors=None, renderer=renderer)
+        return self.render_with_errors(
+            name, value, attrs=attrs, errors=None, renderer=renderer
+        )
 
     @property
     def media(self):
@@ -517,13 +536,14 @@ class BlockWidget(forms.Widget):
 
 class BlockField(forms.Field):
     """Wraps a block object as a form field so that it can be incorporated into a Django form"""
+
     def __init__(self, block=None, **kwargs):
         if block is None:
             raise ImproperlyConfigured("BlockField was not passed a 'block' object")
         self.block = block
 
-        if 'widget' not in kwargs:
-            kwargs['widget'] = BlockWidget(block)
+        if "widget" not in kwargs:
+            kwargs["widget"] = BlockWidget(block)
 
         super().__init__(**kwargs)
 
@@ -531,6 +551,4 @@ class BlockField(forms.Field):
         return self.block.clean(value)
 
 
-DECONSTRUCT_ALIASES = {
-    Block: 'wagtail.core.blocks.Block',
-}
+DECONSTRUCT_ALIASES = {Block: "wagtail.core.blocks.Block"}

@@ -8,10 +8,11 @@ from wagtail.documents.models import get_document_model
 
 # Front-end conversion
 
+
 def document_linktype_handler(attrs):
     Document = get_document_model()
     try:
-        doc = Document.objects.get(id=attrs['id'])
+        doc = Document.objects.get(id=attrs["id"])
         return '<a href="%s">' % escape(doc.url)
     except (Document.DoesNotExist, KeyError):
         return "<a>"
@@ -19,31 +20,36 @@ def document_linktype_handler(attrs):
 
 # hallo.js / editor-html conversion
 
+
 class DocumentLinkHandler:
     @staticmethod
     def get_db_attributes(tag):
-        return {'id': tag['data-id']}
+        return {"id": tag["data-id"]}
 
     @staticmethod
     def expand_db_attributes(attrs):
         Document = get_document_model()
         try:
-            doc = Document.objects.get(id=attrs['id'])
-            return '<a data-linktype="document" data-id="%d" href="%s">' % (doc.id, escape(doc.url))
+            doc = Document.objects.get(id=attrs["id"])
+            return '<a data-linktype="document" data-id="%d" href="%s">' % (
+                doc.id,
+                escape(doc.url),
+            )
         except Document.DoesNotExist:
             # Preserve the ID attribute for troubleshooting purposes, even though it
             # points to a missing document
-            return '<a data-linktype="document" data-id="%s">' % attrs['id']
+            return '<a data-linktype="document" data-id="%s">' % attrs["id"]
         except KeyError:
             return '<a data-linktype="document">'
 
 
 EditorHTMLDocumentLinkConversionRule = [
-    editor_html.LinkTypeRule('document', DocumentLinkHandler),
+    editor_html.LinkTypeRule("document", DocumentLinkHandler)
 ]
 
 
 # draft.js / contentstate conversion
+
 
 def document_link_entity(props):
     """
@@ -52,10 +58,9 @@ def document_link_entity(props):
     when converting from contentstate data
     """
 
-    return DOM.create_element('a', {
-        'linktype': 'document',
-        'id': props.get('id'),
-    }, props['children'])
+    return DOM.create_element(
+        "a", {"linktype": "document", "id": props.get("id")}, props["children"]
+    )
 
 
 class DocumentLinkElementHandler(LinkElementHandler):
@@ -63,30 +68,25 @@ class DocumentLinkElementHandler(LinkElementHandler):
     Rule for populating the attributes of a document link when converting from database representation
     to contentstate
     """
+
     def get_attribute_data(self, attrs):
         Document = get_document_model()
         try:
-            id = int(attrs['id'])
+            id = int(attrs["id"])
         except (KeyError, ValueError):
             return {}
 
         try:
             doc = Document.objects.get(id=id)
         except Document.DoesNotExist:
-            return {'id': id}
+            return {"id": id}
 
-        return {
-            'id': doc.id,
-            'url': doc.url,
-            'filename': doc.filename,
-        }
+        return {"id": doc.id, "url": doc.url, "filename": doc.filename}
 
 
 ContentstateDocumentLinkConversionRule = {
-    'from_database_format': {
-        'a[linktype="document"]': DocumentLinkElementHandler('DOCUMENT'),
+    "from_database_format": {
+        'a[linktype="document"]': DocumentLinkElementHandler("DOCUMENT")
     },
-    'to_database_format': {
-        'entity_decorators': {'DOCUMENT': document_link_entity}
-    }
+    "to_database_format": {"entity_decorators": {"DOCUMENT": document_link_entity}},
 }

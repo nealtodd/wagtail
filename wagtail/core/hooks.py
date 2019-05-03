@@ -22,9 +22,11 @@ def register(hook_name, fn=None, order=0):
 
     # Pretend to be a decorator if fn is not supplied
     if fn is None:
+
         def decorator(fn):
             register(hook_name, fn, order=order)
             return fn
+
         return decorator
 
     if hook_name not in _hooks:
@@ -38,7 +40,7 @@ _searched_for_hooks = False
 def search_for_hooks():
     global _searched_for_hooks
     if not _searched_for_hooks:
-        list(get_app_submodules('wagtail_hooks'))
+        list(get_app_submodules("wagtail_hooks"))
         _searched_for_hooks = True
 
 

@@ -8,9 +8,9 @@ from wagtail.images import get_image_model
 
 
 class AdminImageChooser(AdminChooser):
-    choose_one_text = _('Choose an image')
-    choose_another_text = _('Change image')
-    link_to_chosen_text = _('Edit this image')
+    choose_one_text = _("Choose an image")
+    choose_another_text = _("Change image")
+    link_to_chosen_text = _("Edit this image")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -20,19 +20,22 @@ class AdminImageChooser(AdminChooser):
         instance, value = self.get_instance_and_id(self.image_model, value)
         original_field_html = super().render_html(name, value, attrs)
 
-        return render_to_string("wagtailimages/widgets/image_chooser.html", {
-            'widget': self,
-            'original_field_html': original_field_html,
-            'attrs': attrs,
-            'value': value,
-            'image': instance,
-        })
+        return render_to_string(
+            "wagtailimages/widgets/image_chooser.html",
+            {
+                "widget": self,
+                "original_field_html": original_field_html,
+                "attrs": attrs,
+                "value": value,
+                "image": instance,
+            },
+        )
 
     def render_js_init(self, id_, name, value):
         return "createImageChooser({0});".format(json.dumps(id_))
 
     class Media:
         js = [
-            'wagtailimages/js/image-chooser-modal.js',
-            'wagtailimages/js/image-chooser.js',
+            "wagtailimages/js/image-chooser-modal.js",
+            "wagtailimages/js/image-chooser.js",
         ]

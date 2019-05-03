@@ -2,10 +2,10 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 EMBED_TYPES = (
-    ('video', 'Video'),
-    ('photo', 'Photo'),
-    ('link', 'Link'),
-    ('rich', 'Rich'),
+    ("video", "Video"),
+    ("photo", "Photo"),
+    ("link", "Link"),
+    ("rich", "Rich"),
 )
 
 
@@ -20,6 +20,7 @@ class Embed(models.Model):
     If an instance of this model is deleted, it will be automatically refetched
     next time the embed code is needed.
     """
+
     url = models.URLField()
     max_width = models.SmallIntegerField(null=True, blank=True)
     type = models.CharField(max_length=10, choices=EMBED_TYPES)
@@ -33,9 +34,9 @@ class Embed(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('url', 'max_width')
-        verbose_name = _('embed')
-        verbose_name_plural = _('embeds')
+        unique_together = ("url", "max_width")
+        verbose_name = _("embed")
+        verbose_name_plural = _("embeds")
 
     @property
     def ratio(self):

@@ -2,7 +2,7 @@ from django.db import models
 
 from .registry import register_setting
 
-__all__ = ['BaseSetting', 'register_setting']
+__all__ = ["BaseSetting", "register_setting"]
 
 
 class BaseSetting(models.Model):
@@ -12,7 +12,12 @@ class BaseSetting(models.Model):
     """
 
     site = models.OneToOneField(
-        'wagtailcore.Site', unique=True, db_index=True, editable=False, on_delete=models.CASCADE)
+        "wagtailcore.Site",
+        unique=True,
+        db_index=True,
+        editable=False,
+        on_delete=models.CASCADE,
+    )
 
     class Meta:
         abstract = True

@@ -14,6 +14,7 @@ class EmbedValue:
     we want to be able to do {% embed value.url 500 %} without
     doing a redundant fetch of the embed at the default width.
     """
+
     def __init__(self, url):
         self.url = url
 
@@ -47,14 +48,14 @@ class EmbedBlock(blocks.URLBlock):
     def get_prep_value(self, value):
         # serialisable value should be a URL string
         if value is None:
-            return ''
+            return ""
         else:
             return value.url
 
     def value_for_form(self, value):
         # the value to be handled by the URLField is a plain URL string (or the empty string)
         if value is None:
-            return ''
+            return ""
         else:
             return value.url
 

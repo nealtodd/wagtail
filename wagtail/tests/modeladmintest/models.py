@@ -16,13 +16,15 @@ class Author(models.Model):
         book = self.book_set.first()
         if book:
             return book.title
-        return ''
+        return ""
 
 
 class Book(models.Model, index.Indexed):
     author = models.ForeignKey(Author, on_delete=models.PROTECT)
     title = models.CharField(max_length=255)
-    cover_image = models.ForeignKey('wagtailimages.Image', on_delete=models.SET_NULL, null=True, blank=True)
+    cover_image = models.ForeignKey(
+        "wagtailimages.Image", on_delete=models.SET_NULL, null=True, blank=True
+    )
 
     def __str__(self):
         return self.title

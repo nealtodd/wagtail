@@ -6,7 +6,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 from django.utils.six.moves.urllib.parse import urlparse, urlunparse
 
-logger = logging.getLogger('wagtail.frontendcache')
+logger = logging.getLogger("wagtail.frontendcache")
 
 
 class InvalidFrontendCacheBackendError(ImproperlyConfigured):
@@ -16,18 +16,18 @@ class InvalidFrontendCacheBackendError(ImproperlyConfigured):
 def get_backends(backend_settings=None, backends=None):
     # Get backend settings from WAGTAILFRONTENDCACHE setting
     if backend_settings is None:
-        backend_settings = getattr(settings, 'WAGTAILFRONTENDCACHE', None)
+        backend_settings = getattr(settings, "WAGTAILFRONTENDCACHE", None)
 
     # Fallback to using WAGTAILFRONTENDCACHE_LOCATION setting (backwards compatibility)
     if backend_settings is None:
-        cache_location = getattr(settings, 'WAGTAILFRONTENDCACHE_LOCATION', None)
+        cache_location = getattr(settings, "WAGTAILFRONTENDCACHE_LOCATION", None)
 
         if cache_location is not None:
             backend_settings = {
-                'default': {
-                    'BACKEND': 'wagtail.contrib.frontend_cache.backends.HTTPBackend',
-                    'LOCATION': cache_location,
-                },
+                "default": {
+                    "BACKEND": "wagtail.contrib.frontend_cache.backends.HTTPBackend",
+                    "LOCATION": cache_location,
+                }
             }
 
     # No settings found, return empty list
@@ -41,14 +41,15 @@ def get_backends(backend_settings=None, backends=None):
             continue
 
         backend_config = _backend_config.copy()
-        backend = backend_config.pop('BACKEND')
+        backend = backend_config.pop("BACKEND")
 
         # Try to import the backend
         try:
             backend_cls = import_string(backend)
         except ImportError as e:
-            raise InvalidFrontendCacheBackendError("Could not find backend '%s': %s" % (
-                backend, e))
+            raise InvalidFrontendCacheBackendError(
+                "Could not find backend '%s': %s" % (backend, e)
+            )
 
         backend_objects[backend_name] = backend_cls(backend_config)
 
@@ -63,7 +64,7 @@ def purge_urls_from_cache(urls, backend_settings=None, backends=None):
     # Convert each url to urls one for each managed language (WAGTAILFRONTENDCACHE_LANGUAGES setting).
     # The managed languages are common to all the defined backends.
     # This depends on settings.USE_I18N
-    languages = getattr(settings, 'WAGTAILFRONTENDCACHE_LANGUAGES', [])
+    languages = getattr(settings, "WAGTAILFRONTENDCACHE_LANGUAGES", [])
     if settings.USE_I18N and languages:
         langs_regex = "^/(%s)/" % "|".join(languages)
         new_urls = []
@@ -72,14 +73,16 @@ def purge_urls_from_cache(urls, backend_settings=None, backends=None):
         for isocode, description in languages:
             for url in urls:
                 up = urlparse(url)
-                new_url = urlunparse((
-                    up.scheme,
-                    up.netloc,
-                    re.sub(langs_regex, "/%s/" % isocode, up.path),
-                    up.params,
-                    up.query,
-                    up.fragment
-                ))
+                new_url = urlunparse(
+                    (
+                        up.scheme,
+                        up.netloc,
+                        re.sub(langs_regex, "/%s/" % isocode, up.path),
+                        up.params,
+                        up.query,
+                        up.fragment,
+                    )
+                )
 
                 # Check for best performance. True if re.sub found no match
                 # It happens when i18n_patterns was not used in urls.py to serve content for different languages from different URLs
@@ -102,10 +105,7 @@ def _get_page_cached_urls(page):
     if page_url is None:  # nothing to be done if the page has no routable URL
         return []
 
-    return [
-        page_url + path.lstrip('/')
-        for path in page.specific.get_cached_paths()
-    ]
+    return [page_url + path.lstrip("/") for path in page.specific.get_cached_paths()]
 
 
 def purge_page_from_cache(page, backend_settings=None, backends=None):
@@ -123,6 +123,7 @@ def purge_pages_from_cache(pages, backend_settings=None, backends=None):
 
 class PurgeBatch:
     """Represents a list of URLs to be purged in a single request"""
+
     def __init__(self, urls=None):
         self.urls = []
 

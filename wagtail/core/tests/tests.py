@@ -11,134 +11,151 @@ from wagtail.tests.testapp.models import SimplePage
 
 
 class TestPageUrlTags(TestCase):
-    fixtures = ['test.json']
+    fixtures = ["test.json"]
 
     def test_pageurl_tag(self):
-        response = self.client.get('/events/')
+        response = self.client.get("/events/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response,
-                            '<a href="/events/christmas/">Christmas</a>')
+        self.assertContains(response, '<a href="/events/christmas/">Christmas</a>')
 
     def test_slugurl_tag(self):
-        response = self.client.get('/events/christmas/')
+        response = self.client.get("/events/christmas/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response,
-                            '<a href="/events/">Back to events index</a>')
+        self.assertContains(response, '<a href="/events/">Back to events index</a>')
 
     def test_pageurl_without_request_in_context(self):
-        page = Page.objects.get(url_path='/home/events/')
-        tpl = template.Template('''{% load wagtailcore_tags %}<a href="{% pageurl page %}">{{ page.title }}</a>''')
+        page = Page.objects.get(url_path="/home/events/")
+        tpl = template.Template(
+            """{% load wagtailcore_tags %}<a href="{% pageurl page %}">{{ page.title }}</a>"""
+        )
 
         # no 'request' object in context
-        result = tpl.render(template.Context({'page': page}))
+        result = tpl.render(template.Context({"page": page}))
         self.assertIn('<a href="/events/">Events</a>', result)
 
         # 'request' object in context, but no 'site' attribute
-        result = tpl.render(template.Context({'page': page, 'request': HttpRequest()}))
+        result = tpl.render(template.Context({"page": page, "request": HttpRequest()}))
         self.assertIn('<a href="/events/">Events</a>', result)
 
     def test_bad_pageurl(self):
-        tpl = template.Template('''{% load wagtailcore_tags %}<a href="{% pageurl page %}">{{ page.title }}</a>''')
+        tpl = template.Template(
+            """{% load wagtailcore_tags %}<a href="{% pageurl page %}">{{ page.title }}</a>"""
+        )
 
-        with self.assertRaisesRegex(ValueError, "pageurl tag expected a Page object, got None"):
-            tpl.render(template.Context({'page': None}))
+        with self.assertRaisesRegex(
+            ValueError, "pageurl tag expected a Page object, got None"
+        ):
+            tpl.render(template.Context({"page": None}))
 
     def test_bad_slugurl(self):
         # no 'request' object in context
-        result = slugurl(template.Context({}), 'bad-slug-doesnt-exist')
+        result = slugurl(template.Context({}), "bad-slug-doesnt-exist")
         self.assertEqual(result, None)
 
         # 'request' object in context, but no 'site' attribute
-        result = slugurl(context=template.Context({'request': HttpRequest()}), slug='bad-slug-doesnt-exist')
+        result = slugurl(
+            context=template.Context({"request": HttpRequest()}),
+            slug="bad-slug-doesnt-exist",
+        )
         self.assertEqual(result, None)
 
     def test_slugurl_tag_returns_url_for_current_site(self):
-        home_page = Page.objects.get(url_path='/home/')
-        new_home_page = home_page.copy(update_attrs={'title': "New home page", 'slug': 'new-home'})
-        second_site = Site.objects.create(hostname='site2.example.com', root_page=new_home_page)
+        home_page = Page.objects.get(url_path="/home/")
+        new_home_page = home_page.copy(
+            update_attrs={"title": "New home page", "slug": "new-home"}
+        )
+        second_site = Site.objects.create(
+            hostname="site2.example.com", root_page=new_home_page
+        )
         # Add a page to the new site that has a slug that is the same as one on
         # the first site, but is in a different position in the treeself.
-        new_christmas_page = Page(title='Christmas', slug='christmas')
+        new_christmas_page = Page(title="Christmas", slug="christmas")
         new_home_page.add_child(instance=new_christmas_page)
         request = HttpRequest()
         request.site = second_site
-        url = slugurl(context=template.Context({'request': request}), slug='christmas')
-        self.assertEqual(url, '/christmas/')
+        url = slugurl(context=template.Context({"request": request}), slug="christmas")
+        self.assertEqual(url, "/christmas/")
 
     def test_slugurl_tag_returns_url_for_other_site(self):
-        home_page = Page.objects.get(url_path='/home/')
-        new_home_page = home_page.copy(update_attrs={'title': "New home page", 'slug': 'new-home'})
-        second_site = Site.objects.create(hostname='site2.example.com', root_page=new_home_page)
+        home_page = Page.objects.get(url_path="/home/")
+        new_home_page = home_page.copy(
+            update_attrs={"title": "New home page", "slug": "new-home"}
+        )
+        second_site = Site.objects.create(
+            hostname="site2.example.com", root_page=new_home_page
+        )
         request = HttpRequest()
         request.site = second_site
         # There is no page with this slug on the current site, so this
         # should return an absolute URL for the page on the first site.
-        url = slugurl(slug='christmas', context=template.Context({'request': request}))
-        self.assertEqual(url, 'http://localhost/events/christmas/')
+        url = slugurl(slug="christmas", context=template.Context({"request": request}))
+        self.assertEqual(url, "http://localhost/events/christmas/")
 
     def test_slugurl_without_request_in_context(self):
         # no 'request' object in context
-        result = slugurl(template.Context({}), 'events')
-        self.assertEqual(result, '/events/')
+        result = slugurl(template.Context({}), "events")
+        self.assertEqual(result, "/events/")
 
         # 'request' object in context, but no 'site' attribute
-        result = slugurl(template.Context({'request': HttpRequest()}), 'events')
-        self.assertEqual(result, '/events/')
+        result = slugurl(template.Context({"request": HttpRequest()}), "events")
+        self.assertEqual(result, "/events/")
 
 
 class TestSiteRootPathsCache(TestCase):
-    fixtures = ['test.json']
+    fixtures = ["test.json"]
 
     def test_cache(self):
         """
         This tests that the cache is populated when building URLs
         """
         # Get homepage
-        homepage = Page.objects.get(url_path='/home/')
+        homepage = Page.objects.get(url_path="/home/")
 
         # Warm up the cache by getting the url
         _ = homepage.url  # noqa
 
         # Check that the cache has been set correctly
-        self.assertEqual(cache.get('wagtail_site_root_paths'), [(1, '/home/', 'http://localhost')])
+        self.assertEqual(
+            cache.get("wagtail_site_root_paths"), [(1, "/home/", "http://localhost")]
+        )
 
     def test_cache_clears_when_site_saved(self):
         """
         This tests that the cache is cleared whenever a site is saved
         """
         # Get homepage
-        homepage = Page.objects.get(url_path='/home/')
+        homepage = Page.objects.get(url_path="/home/")
 
         # Warm up the cache by getting the url
         _ = homepage.url  # noqa
 
         # Check that the cache has been set
-        self.assertTrue(cache.get('wagtail_site_root_paths'))
+        self.assertTrue(cache.get("wagtail_site_root_paths"))
 
         # Save the site
         Site.objects.get(is_default_site=True).save()
 
         # Check that the cache has been cleared
-        self.assertFalse(cache.get('wagtail_site_root_paths'))
+        self.assertFalse(cache.get("wagtail_site_root_paths"))
 
     def test_cache_clears_when_site_deleted(self):
         """
         This tests that the cache is cleared whenever a site is deleted
         """
         # Get homepage
-        homepage = Page.objects.get(url_path='/home/')
+        homepage = Page.objects.get(url_path="/home/")
 
         # Warm up the cache by getting the url
         _ = homepage.url  # noqa
 
         # Check that the cache has been set
-        self.assertTrue(cache.get('wagtail_site_root_paths'))
+        self.assertTrue(cache.get("wagtail_site_root_paths"))
 
         # Delete the site
         Site.objects.get(is_default_site=True).delete()
 
         # Check that the cache has been cleared
-        self.assertFalse(cache.get('wagtail_site_root_paths'))
+        self.assertFalse(cache.get("wagtail_site_root_paths"))
 
     def test_cache_clears_when_site_root_moves(self):
         """
@@ -155,11 +172,13 @@ class TestSiteRootPathsCache(TestCase):
         """
         # Get homepage, root page and site
         root_page = Page.objects.get(id=1)
-        homepage = Page.objects.get(url_path='/home/')
+        homepage = Page.objects.get(url_path="/home/")
         default_site = Site.objects.get(is_default_site=True)
 
         # Create a new homepage under current homepage
-        new_homepage = SimplePage(title="New Homepage", slug="new-homepage", content="hello")
+        new_homepage = SimplePage(
+            title="New Homepage", slug="new-homepage", content="hello"
+        )
         homepage.add_child(instance=new_homepage)
 
         # Set new homepage as the site root page
@@ -170,13 +189,13 @@ class TestSiteRootPathsCache(TestCase):
         _ = homepage.url  # noqa
 
         # Move new homepage to root
-        new_homepage.move(root_page, pos='last-child')
+        new_homepage.move(root_page, pos="last-child")
 
         # Get fresh instance of new_homepage
         new_homepage = Page.objects.get(id=new_homepage.id)
 
         # Check url
-        self.assertEqual(new_homepage.url, '/')
+        self.assertEqual(new_homepage.url, "/")
 
     def test_cache_clears_when_site_root_slug_changes(self):
         """
@@ -192,7 +211,7 @@ class TestSiteRootPathsCache(TestCase):
         Discussion: https://github.com/wagtail/wagtail/issues/157
         """
         # Get homepage
-        homepage = Page.objects.get(url_path='/home/')
+        homepage = Page.objects.get(url_path="/home/")
 
         # Warm up the cache by getting the url
         _ = homepage.url  # noqa
@@ -206,22 +225,22 @@ class TestSiteRootPathsCache(TestCase):
         homepage = Page.objects.get(id=homepage.id)
 
         # Check url
-        self.assertEqual(homepage.url, '/')
+        self.assertEqual(homepage.url, "/")
 
 
 class TestResolveModelString(TestCase):
     def test_resolve_from_string(self):
-        model = resolve_model_string('wagtailcore.Page')
+        model = resolve_model_string("wagtailcore.Page")
 
         self.assertEqual(model, Page)
 
     def test_resolve_from_string_with_default_app(self):
-        model = resolve_model_string('Page', default_app='wagtailcore')
+        model = resolve_model_string("Page", default_app="wagtailcore")
 
         self.assertEqual(model, Page)
 
     def test_resolve_from_string_with_different_default_app(self):
-        model = resolve_model_string('wagtailcore.Page', default_app='wagtailadmin')
+        model = resolve_model_string("wagtailcore.Page", default_app="wagtailadmin")
 
         self.assertEqual(model, Page)
 
@@ -231,16 +250,18 @@ class TestResolveModelString(TestCase):
         self.assertEqual(model, Page)
 
     def test_resolve_from_string_invalid(self):
-        self.assertRaises(ValueError, resolve_model_string, 'wagtail.core.Page')
+        self.assertRaises(ValueError, resolve_model_string, "wagtail.core.Page")
 
     def test_resolve_from_string_with_incorrect_default_app(self):
-        self.assertRaises(LookupError, resolve_model_string, 'Page', default_app='wagtailadmin')
+        self.assertRaises(
+            LookupError, resolve_model_string, "Page", default_app="wagtailadmin"
+        )
 
     def test_resolve_from_string_with_unknown_model_string(self):
-        self.assertRaises(LookupError, resolve_model_string, 'wagtailadmin.Page')
+        self.assertRaises(LookupError, resolve_model_string, "wagtailadmin.Page")
 
     def test_resolve_from_string_with_no_default_app(self):
-        self.assertRaises(ValueError, resolve_model_string, 'Page')
+        self.assertRaises(ValueError, resolve_model_string, "Page")
 
     def test_resolve_from_class_that_isnt_a_model(self):
         self.assertRaises(ValueError, resolve_model_string, object)
@@ -263,9 +284,13 @@ class TestRichtextTag(TestCase):
         self.assertEqual(result, '<div class="rich-text"></div>')
 
     def test_call_with_invalid_value(self):
-        with self.assertRaisesRegex(TypeError, "'richtext' template filter received an invalid value"):
+        with self.assertRaisesRegex(
+            TypeError, "'richtext' template filter received an invalid value"
+        ):
             richtext(42)
 
     def test_call_with_bytes(self):
-        with self.assertRaisesRegex(TypeError, "'richtext' template filter received an invalid value"):
+        with self.assertRaisesRegex(
+            TypeError, "'richtext' template filter received an invalid value"
+        ):
             richtext(b"Hello world!")

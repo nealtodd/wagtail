@@ -29,12 +29,16 @@ from wagtail.core.query import PageQuerySet, TreeQuerySet
 from wagtail.core.signals import page_published, page_unpublished
 from wagtail.core.sites import get_site_for_hostname
 from wagtail.core.url_routing import RouteResult
-from wagtail.core.utils import WAGTAIL_APPEND_SLASH, camelcase_to_underscore, resolve_model_string
+from wagtail.core.utils import (
+    WAGTAIL_APPEND_SLASH,
+    camelcase_to_underscore,
+    resolve_model_string,
+)
 from wagtail.search import index
 
-logger = logging.getLogger('wagtail.core')
+logger = logging.getLogger("wagtail.core")
 
-PAGE_TEMPLATE_VAR = 'page'
+PAGE_TEMPLATE_VAR = "page"
 
 
 class SiteManager(models.Manager):
@@ -43,49 +47,53 @@ class SiteManager(models.Manager):
 
 
 class Site(models.Model):
-    hostname = models.CharField(verbose_name=_('hostname'), max_length=255, db_index=True)
+    hostname = models.CharField(
+        verbose_name=_("hostname"), max_length=255, db_index=True
+    )
     port = models.IntegerField(
-        verbose_name=_('port'),
+        verbose_name=_("port"),
         default=80,
         help_text=_(
             "Set this to something other than 80 if you need a specific port number to appear in URLs"
             " (e.g. development on port 8000). Does not affect request handling (so port forwarding still works)."
-        )
+        ),
     )
     site_name = models.CharField(
-        verbose_name=_('site name'),
+        verbose_name=_("site name"),
         max_length=255,
         null=True,
         blank=True,
-        help_text=_("Human-readable name for the site.")
+        help_text=_("Human-readable name for the site."),
     )
-    root_page = models.ForeignKey('Page', verbose_name=_('root page'), related_name='sites_rooted_here', on_delete=models.CASCADE)
+    root_page = models.ForeignKey(
+        "Page",
+        verbose_name=_("root page"),
+        related_name="sites_rooted_here",
+        on_delete=models.CASCADE,
+    )
     is_default_site = models.BooleanField(
-        verbose_name=_('is default site'),
+        verbose_name=_("is default site"),
         default=False,
         help_text=_(
             "If true, this site will handle requests for all other hostnames that do not have a site entry of their own"
-        )
+        ),
     )
 
     objects = SiteManager()
 
     class Meta:
-        unique_together = ('hostname', 'port')
-        verbose_name = _('site')
-        verbose_name_plural = _('sites')
+        unique_together = ("hostname", "port")
+        verbose_name = _("site")
+        verbose_name_plural = _("sites")
 
     def natural_key(self):
         return (self.hostname, self.port)
 
     def __str__(self):
         if self.site_name:
-            return(
-                self.site_name
-                + (" [default]" if self.is_default_site else "")
-            )
+            return self.site_name + (" [default]" if self.is_default_site else "")
         else:
-            return(
+            return (
                 self.hostname
                 + ("" if self.port == 80 else (":%d" % self.port))
                 + (" [default]" if self.is_default_site else "")
@@ -107,18 +115,18 @@ class Site(models.Model):
         still be routed to a different hostname which is set as the default
         """
 
-        hostname = request.get_host().split(':')[0]
+        hostname = request.get_host().split(":")[0]
         port = request.get_port()
         return get_site_for_hostname(hostname, port)
 
     @property
     def root_url(self):
         if self.port == 80:
-            return 'http://%s' % self.hostname
+            return "http://%s" % self.hostname
         elif self.port == 443:
-            return 'https://%s' % self.hostname
+            return "https://%s" % self.hostname
         else:
-            return 'http://%s:%d' % (self.hostname, self.port)
+            return "http://%s:%d" % (self.hostname, self.port)
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude)
@@ -132,13 +140,15 @@ class Site(models.Model):
         else:
             if self.is_default_site and self.pk != default.pk:
                 raise ValidationError(
-                    {'is_default_site': [
-                        _(
-                            "%(hostname)s is already configured as the default site."
-                            " You must unset that before you can save this site as default."
-                        )
-                        % {'hostname': default.hostname}
-                    ]}
+                    {
+                        "is_default_site": [
+                            _(
+                                "%(hostname)s is already configured as the default site."
+                                " You must unset that before you can save this site as default."
+                            )
+                            % {"hostname": default.hostname}
+                        ]
+                    }
                 )
 
     @staticmethod
@@ -147,15 +157,16 @@ class Site(models.Model):
         Return a list of (id, root_path, root_url) tuples, most specific path
         first - used to translate url_paths into actual URLs with hostnames
         """
-        result = cache.get('wagtail_site_root_paths')
+        result = cache.get("wagtail_site_root_paths")
 
         if result is None:
             result = [
                 (site.id, site.root_page.url_path, site.root_url)
-                for site in Site.objects.select_related('root_page').order_by(
-                    '-root_page__url_path', '-is_default_site', 'hostname')
+                for site in Site.objects.select_related("root_page").order_by(
+                    "-root_page__url_path", "-is_default_site", "hostname"
+                )
             ]
-            cache.set('wagtail_site_root_paths', result, 3600)
+            cache.set("wagtail_site_root_paths", result, 3600)
 
         return result
 
@@ -180,7 +191,7 @@ def get_default_page_content_type():
 
 class BasePageManager(models.Manager):
     def get_queryset(self):
-        return self._queryset_class(self.model).order_by('path')
+        return self._queryset_class(self.model).order_by("path")
 
 
 PageManager = BasePageManager.from_queryset(PageQuerySet)
@@ -188,22 +199,30 @@ PageManager = BasePageManager.from_queryset(PageQuerySet)
 
 class PageBase(models.base.ModelBase):
     """Metaclass for Page"""
+
     def __init__(cls, name, bases, dct):
         super(PageBase, cls).__init__(name, bases, dct)
 
-        if 'template' not in dct:
+        if "template" not in dct:
             # Define a default template path derived from the app name and model name
-            cls.template = "%s/%s.html" % (cls._meta.app_label, camelcase_to_underscore(name))
+            cls.template = "%s/%s.html" % (
+                cls._meta.app_label,
+                camelcase_to_underscore(name),
+            )
 
-        if 'ajax_template' not in dct:
+        if "ajax_template" not in dct:
             cls.ajax_template = None
 
-        cls._clean_subpage_models = None  # to be filled in on first call to cls.clean_subpage_models
-        cls._clean_parent_page_models = None  # to be filled in on first call to cls.clean_parent_page_models
+        cls._clean_subpage_models = (
+            None
+        )  # to be filled in on first call to cls.clean_subpage_models
+        cls._clean_parent_page_models = (
+            None
+        )  # to be filled in on first call to cls.clean_parent_page_models
 
         # All pages should be creatable unless explicitly set otherwise.
         # This attribute is not inheritable.
-        if 'is_creatable' not in dct:
+        if "is_creatable" not in dct:
             cls.is_creatable = not cls._meta.abstract
 
         if not cls._meta.abstract:
@@ -218,6 +237,7 @@ class AbstractPage(MP_Node):
     via multi-table inheritance are not. We therefore need to attach PageManager to an abstract
     superclass to ensure that it is retained by subclasses of Page.
     """
+
     objects = PageManager()
 
     class Meta:
@@ -226,114 +246,110 @@ class AbstractPage(MP_Node):
 
 class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
     title = models.CharField(
-        verbose_name=_('title'),
+        verbose_name=_("title"),
         max_length=255,
-        help_text=_("The page title as you'd like it to be seen by the public")
+        help_text=_("The page title as you'd like it to be seen by the public"),
     )
     # to reflect title of a current draft in the admin UI
-    draft_title = models.CharField(
-        max_length=255,
-        editable=False
-    )
+    draft_title = models.CharField(max_length=255, editable=False)
     slug = models.SlugField(
-        verbose_name=_('slug'),
+        verbose_name=_("slug"),
         allow_unicode=True,
         max_length=255,
-        help_text=_("The name of the page as it will appear in URLs e.g http://domain.com/blog/[my-slug]/")
+        help_text=_(
+            "The name of the page as it will appear in URLs e.g http://domain.com/blog/[my-slug]/"
+        ),
     )
     content_type = models.ForeignKey(
-        'contenttypes.ContentType',
-        verbose_name=_('content type'),
-        related_name='pages',
-        on_delete=models.SET(get_default_page_content_type)
+        "contenttypes.ContentType",
+        verbose_name=_("content type"),
+        related_name="pages",
+        on_delete=models.SET(get_default_page_content_type),
     )
-    live = models.BooleanField(verbose_name=_('live'), default=True, editable=False)
+    live = models.BooleanField(verbose_name=_("live"), default=True, editable=False)
     has_unpublished_changes = models.BooleanField(
-        verbose_name=_('has unpublished changes'),
-        default=False,
-        editable=False
+        verbose_name=_("has unpublished changes"), default=False, editable=False
     )
-    url_path = models.TextField(verbose_name=_('URL path'), blank=True, editable=False)
+    url_path = models.TextField(verbose_name=_("URL path"), blank=True, editable=False)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        verbose_name=_('owner'),
+        verbose_name=_("owner"),
         null=True,
         blank=True,
         editable=True,
         on_delete=models.SET_NULL,
-        related_name='owned_pages'
+        related_name="owned_pages",
     )
 
     seo_title = models.CharField(
         verbose_name=_("page title"),
         max_length=255,
         blank=True,
-        help_text=_("Optional. 'Search Engine Friendly' title. This will appear at the top of the browser window.")
+        help_text=_(
+            "Optional. 'Search Engine Friendly' title. This will appear at the top of the browser window."
+        ),
     )
 
     show_in_menus_default = False
     show_in_menus = models.BooleanField(
-        verbose_name=_('show in menus'),
+        verbose_name=_("show in menus"),
         default=False,
-        help_text=_("Whether a link to this page will appear in automatically generated menus")
+        help_text=_(
+            "Whether a link to this page will appear in automatically generated menus"
+        ),
     )
-    search_description = models.TextField(verbose_name=_('search description'), blank=True)
+    search_description = models.TextField(
+        verbose_name=_("search description"), blank=True
+    )
 
     go_live_at = models.DateTimeField(
-        verbose_name=_("go live date/time"),
-        blank=True,
-        null=True
+        verbose_name=_("go live date/time"), blank=True, null=True
     )
     expire_at = models.DateTimeField(
-        verbose_name=_("expiry date/time"),
-        blank=True,
-        null=True
+        verbose_name=_("expiry date/time"), blank=True, null=True
     )
-    expired = models.BooleanField(verbose_name=_('expired'), default=False, editable=False)
+    expired = models.BooleanField(
+        verbose_name=_("expired"), default=False, editable=False
+    )
 
-    locked = models.BooleanField(verbose_name=_('locked'), default=False, editable=False)
+    locked = models.BooleanField(
+        verbose_name=_("locked"), default=False, editable=False
+    )
 
     first_published_at = models.DateTimeField(
-        verbose_name=_('first published at'),
-        blank=True,
-        null=True,
-        db_index=True
+        verbose_name=_("first published at"), blank=True, null=True, db_index=True
     )
     last_published_at = models.DateTimeField(
-        verbose_name=_('last published at'),
-        null=True,
-        editable=False
+        verbose_name=_("last published at"), null=True, editable=False
     )
     latest_revision_created_at = models.DateTimeField(
-        verbose_name=_('latest revision created at'),
-        null=True,
-        editable=False
+        verbose_name=_("latest revision created at"), null=True, editable=False
     )
     live_revision = models.ForeignKey(
-        'PageRevision',
-        related_name='+',
-        verbose_name='live revision',
+        "PageRevision",
+        related_name="+",
+        verbose_name="live revision",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        editable=False
+        editable=False,
     )
 
     search_fields = [
-        index.SearchField('title', partial_match=True, boost=2),
-        index.AutocompleteField('title'),
-        index.FilterField('title'),
-        index.FilterField('id'),
-        index.FilterField('live'),
-        index.FilterField('owner'),
-        index.FilterField('content_type'),
-        index.FilterField('path'),
-        index.FilterField('depth'),
-        index.FilterField('locked'),
-        index.FilterField('show_in_menus'),
-        index.FilterField('first_published_at'),
-        index.FilterField('last_published_at'),
-        index.FilterField('latest_revision_created_at'),
+        index.SearchField("title", partial_match=True, boost=2),
+        index.AutocompleteField("title"),
+        index.FilterField("title"),
+        index.FilterField("id"),
+        index.FilterField("live"),
+        index.FilterField("owner"),
+        index.FilterField("content_type"),
+        index.FilterField("path"),
+        index.FilterField("depth"),
+        index.FilterField("locked"),
+        index.FilterField("show_in_menus"),
+        index.FilterField("first_published_at"),
+        index.FilterField("last_published_at"),
+        index.FilterField("latest_revision_created_at"),
     ]
 
     # Do not allow plain Page instances to be created through the Wagtail admin
@@ -360,7 +376,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
                 # set content type to correctly represent the model class
                 # that this was created as
                 self.content_type = ContentType.objects.get_for_model(self)
-            if 'show_in_menus' not in kwargs:
+            if "show_in_menus" not in kwargs:
                 # if the value is not set on submit refer to the model setting
                 self.show_in_menus = self.show_in_menus_default
 
@@ -375,10 +391,10 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         been assigned a position in the tree, as far as treebeard is concerned.
         """
         if parent:
-            self.url_path = parent.url_path + self.slug + '/'
+            self.url_path = parent.url_path + self.slug + "/"
         else:
             # a page without a parent is the tree root, which always has a url_path of '/'
-            self.url_path = '/'
+            self.url_path = "/"
 
         return self.url_path
 
@@ -430,7 +446,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
     def clean(self):
         super().clean()
         if not Page._slug_is_available(self.slug, self.get_parent(), self):
-            raise ValidationError({'slug': _("This slug is already in use")})
+            raise ValidationError({"slug": _("This slug is already in use")})
 
     @transaction.atomic
     # ensure that changes are only committed when we have updated all descendant URL paths, to preserve consistency
@@ -448,7 +464,9 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         else:
             # Check that we are committing the slug to the database
             # Basically: If update_fields has been specified, and slug is not included, skip this step
-            if not ('update_fields' in kwargs and 'slug' not in kwargs['update_fields']):
+            if not (
+                "update_fields" in kwargs and "slug" not in kwargs["update_fields"]
+            ):
                 # see if the slug has changed from the record in the db, in which case we need to
                 # update url_path of self and all descendants
                 old_record = Page.objects.get(id=self.id)
@@ -465,18 +483,18 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
 
         # Check if this is a root page of any sites and clear the 'wagtail_site_root_paths' key if so
         if Site.objects.filter(root_page=self).exists():
-            cache.delete('wagtail_site_root_paths')
+            cache.delete("wagtail_site_root_paths")
 
         # Log
         if is_new:
             cls = type(self)
             logger.info(
-                "Page created: \"%s\" id=%d content_type=%s.%s path=%s",
+                'Page created: "%s" id=%d content_type=%s.%s path=%s',
                 self.title,
                 self.id,
                 cls._meta.app_label,
                 cls.__name__,
-                self.url_path
+                self.url_path,
             )
 
         return result
@@ -501,19 +519,25 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         # to prevent pages disappearing unexpectedly and the tree being corrupted
 
         # get names of foreign keys pointing to parent classes (such as page_ptr)
-        field_exceptions = [field.name
-                            for model in [cls] + list(cls._meta.get_parent_list())
-                            for field in model._meta.parents.values() if field]
+        field_exceptions = [
+            field.name
+            for model in [cls] + list(cls._meta.get_parent_list())
+            for field in model._meta.parents.values()
+            if field
+        ]
 
         for field in cls._meta.fields:
-            if isinstance(field, models.ForeignKey) and field.name not in field_exceptions:
+            if (
+                isinstance(field, models.ForeignKey)
+                and field.name not in field_exceptions
+            ):
                 if field.remote_field.on_delete == models.CASCADE:
                     errors.append(
                         checks.Warning(
                             "Field hasn't specified on_delete action",
                             hint="Set on_delete=models.SET_NULL and make sure the field is nullable or set on_delete=models.PROTECT. Wagtail does not allow simple database CASCADE because it will corrupt its tree storage.",
                             obj=field,
-                            id='wagtailcore.W001',
+                            id="wagtailcore.W001",
                         )
                     )
 
@@ -523,7 +547,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
                     "Manager does not inherit from PageManager",
                     hint="Ensure that custom Page managers inherit from wagtail.core.models.PageManager",
                     obj=cls,
-                    id='wagtailcore.E002',
+                    id="wagtailcore.E002",
                 )
             )
 
@@ -534,7 +558,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
                 checks.Error(
                     "Invalid subpage_types setting for %s" % cls,
                     hint=str(e),
-                    id='wagtailcore.E002'
+                    id="wagtailcore.E002",
                 )
             )
 
@@ -545,19 +569,22 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
                 checks.Error(
                     "Invalid parent_page_types setting for %s" % cls,
                     hint=str(e),
-                    id='wagtailcore.E002'
+                    id="wagtailcore.E002",
                 )
             )
 
         return errors
 
     def _update_descendant_url_paths(self, old_url_path, new_url_path):
-        (Page.objects
-            .filter(path__startswith=self.path)
+        (
+            Page.objects.filter(path__startswith=self.path)
             .exclude(pk=self.pk)
-            .update(url_path=Concat(
-                Value(new_url_path),
-                Substr('url_path', len(old_url_path) + 1))))
+            .update(
+                url_path=Concat(
+                    Value(new_url_path), Substr("url_path", len(old_url_path) + 1)
+                )
+            )
+        )
 
     #: Return this page in its most specific subclassed form.
     @cached_property
@@ -623,7 +650,13 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         # in a fixture or migration that didn't explicitly handle draft_title)
         return self.draft_title or self.title
 
-    def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None, changed=True):
+    def save_revision(
+        self,
+        user=None,
+        submitted_for_moderation=False,
+        approved_go_live_at=None,
+        changed=True,
+    ):
         self.full_clean()
 
         # Create revision
@@ -637,28 +670,35 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         update_fields = []
 
         self.latest_revision_created_at = revision.created_at
-        update_fields.append('latest_revision_created_at')
+        update_fields.append("latest_revision_created_at")
 
         self.draft_title = self.title
-        update_fields.append('draft_title')
+        update_fields.append("draft_title")
 
         if changed:
             self.has_unpublished_changes = True
-            update_fields.append('has_unpublished_changes')
+            update_fields.append("has_unpublished_changes")
 
         if update_fields:
             self.save(update_fields=update_fields)
 
         # Log
-        logger.info("Page edited: \"%s\" id=%d revision_id=%d", self.title, self.id, revision.id)
+        logger.info(
+            'Page edited: "%s" id=%d revision_id=%d', self.title, self.id, revision.id
+        )
 
         if submitted_for_moderation:
-            logger.info("Page submitted for moderation: \"%s\" id=%d revision_id=%d", self.title, self.id, revision.id)
+            logger.info(
+                'Page submitted for moderation: "%s" id=%d revision_id=%d',
+                self.title,
+                self.id,
+                revision.id,
+            )
 
         return revision
 
     def get_latest_revision(self):
-        return self.revisions.order_by('-created_at', '-id').first()
+        return self.revisions.order_by("-created_at", "-id").first()
 
     def get_latest_revision_as_page(self):
         if not self.has_unpublished_changes:
@@ -691,16 +731,12 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
 
             page_unpublished.send(sender=self.specific_class, instance=self.specific)
 
-            logger.info("Page unpublished: \"%s\" id=%d", self.title, self.id)
+            logger.info('Page unpublished: "%s" id=%d', self.title, self.id)
 
             self.revisions.update(approved_go_live_at=None)
 
     def get_context(self, request, *args, **kwargs):
-        return {
-            PAGE_TEMPLATE_VAR: self,
-            'self': self,
-            'request': request,
-        }
+        return {PAGE_TEMPLATE_VAR: self, "self": self, "request": request}
 
     def get_template(self, request, *args, **kwargs):
         if request.is_ajax():
@@ -709,12 +745,12 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
             return self.template
 
     def serve(self, request, *args, **kwargs):
-        request.is_preview = getattr(request, 'is_preview', False)
+        request.is_preview = getattr(request, "is_preview", False)
 
         return TemplateResponse(
             request,
             self.get_template(request, *args, **kwargs),
-            self.get_context(request, *args, **kwargs)
+            self.get_context(request, *args, **kwargs),
         )
 
     def is_navigable(self):
@@ -767,21 +803,20 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
 
         site_id, root_path, root_url = possible_sites[0]
 
-        if hasattr(request, 'site'):
+        if hasattr(request, "site"):
             for site_id, root_path, root_url in possible_sites:
                 if site_id == request.site.pk:
                     break
             else:
                 site_id, root_path, root_url = possible_sites[0]
 
-        page_path = reverse(
-            'wagtail_serve', args=(self.url_path[len(root_path):],))
+        page_path = reverse("wagtail_serve", args=(self.url_path[len(root_path) :],))
 
         # Remove the trailing slash from the URL reverse generates if
         # WAGTAIL_APPEND_SLASH is False and we're not trying to serve
         # the root path
-        if not WAGTAIL_APPEND_SLASH and page_path != '/':
-            page_path = page_path.rstrip('/')
+        if not WAGTAIL_APPEND_SLASH and page_path != "/":
+            page_path = page_path.rstrip("/")
 
         return (site_id, root_url, page_path)
 
@@ -817,7 +852,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         # a relative URL based on ``request.site``. Nonetheless, support it here to avoid
         # copy/pasting the code to the ``relative_url`` method below.
         if current_site is None and request is not None:
-            current_site = getattr(request, 'site', None)
+            current_site = getattr(request, "site", None)
         url_parts = self.get_url_parts(request=request)
 
         if url_parts is None:
@@ -826,7 +861,9 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
 
         site_id, root_url, page_path = url_parts
 
-        if (current_site is not None and site_id == current_site.id) or len(self._get_site_root_paths(request)) == 1:
+        if (current_site is not None and site_id == current_site.id) or len(
+            self._get_site_root_paths(request)
+        ) == 1:
             # the site matches OR we're only running a single site, so a local URL is sufficient
             return page_path
         else:
@@ -884,7 +921,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         or LookupError if a model does not exist (or is not a Page subclass).
         """
         if cls._clean_subpage_models is None:
-            subpage_types = getattr(cls, 'subpage_types', None)
+            subpage_types = getattr(cls, "subpage_types", None)
             if subpage_types is None:
                 # if subpage_types is not specified on the Page class, allow all page types as subpages
                 cls._clean_subpage_models = get_page_models()
@@ -909,7 +946,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         """
 
         if cls._clean_parent_page_models is None:
-            parent_page_types = getattr(cls, 'parent_page_types', None)
+            parent_page_types = getattr(cls, "parent_page_types", None)
             if parent_page_types is None:
                 # if parent_page_types is not specified on the Page class, allow all page types as subpages
                 cls._clean_parent_page_models = get_page_models()
@@ -932,7 +969,8 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         as a list of model classes
         """
         return [
-            parent_model for parent_model in cls.clean_parent_page_models()
+            parent_model
+            for parent_model in cls.clean_parent_page_models()
             if cls in parent_model.clean_subpage_models()
         ]
 
@@ -943,7 +981,8 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         as a list of model classes
         """
         return [
-            subpage_model for subpage_model in cls.clean_subpage_models()
+            subpage_model
+            for subpage_model in cls.clean_subpage_models()
             if cls in subpage_model.clean_parent_page_models()
         ]
 
@@ -954,7 +993,8 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         as a list of model classes
         """
         return [
-            page_model for page_model in cls.allowed_subpage_models()
+            page_model
+            for page_model in cls.allowed_subpage_models()
             if page_model.is_creatable
         ]
 
@@ -1024,7 +1064,9 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         permission to delete this article. Returns true if and only if this page is non-live,
         and it has no live children.
         """
-        return (not self.live) and (not self.get_descendants().filter(live=True).exists())
+        return (not self.live) and (
+            not self.get_descendants().filter(live=True).exists()
+        )
 
     @transaction.atomic  # only commit when all descendants are properly updated
     def move(self, target, pos=None):
@@ -1041,12 +1083,28 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         new_self._update_descendant_url_paths(old_url_path, new_url_path)
 
         # Log
-        logger.info("Page moved: \"%s\" id=%d path=%s", self.title, self.id, new_url_path)
+        logger.info('Page moved: "%s" id=%d path=%s', self.title, self.id, new_url_path)
 
-    def copy(self, recursive=False, to=None, update_attrs=None, copy_revisions=True, keep_live=True, user=None):
+    def copy(
+        self,
+        recursive=False,
+        to=None,
+        update_attrs=None,
+        copy_revisions=True,
+        keep_live=True,
+        user=None,
+    ):
         # Fill dict with self.specific values
         specific_self = self.specific
-        default_exclude_fields = ['id', 'path', 'depth', 'numchild', 'url_path', 'path', 'index_entries']
+        default_exclude_fields = [
+            "id",
+            "path",
+            "depth",
+            "numchild",
+            "url_path",
+            "path",
+            "index_entries",
+        ]
         exclude_fields = default_exclude_fields + specific_self.exclude_fields_in_copy
         specific_dict = {}
 
@@ -1065,7 +1123,10 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
                 continue
 
             # Ignore parent links (page_ptr)
-            if isinstance(field, models.OneToOneField) and field.remote_field.parent_link:
+            if (
+                isinstance(field, models.OneToOneField)
+                and field.remote_field.parent_link
+            ):
                 continue
 
             specific_dict[field.name] = getattr(specific_self, field.name)
@@ -1125,7 +1186,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
 
                 # Update ID fields in content
                 revision_content = json.loads(revision.content_json)
-                revision_content['pk'] = page_copy.pk
+                revision_content["pk"] = page_copy.pk
 
                 for child_relation in get_all_child_relations(specific_self):
                     accessor_name = child_relation.get_accessor_name()
@@ -1142,7 +1203,9 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
                         # Remap primary key to copied versions
                         # If the primary key is not recognised (eg, the child object has been deleted from the database)
                         # set the primary key to None
-                        child_object['pk'] = child_object_id_map[accessor_name].get(child_object['pk'], None)
+                        child_object["pk"] = child_object_id_map[accessor_name].get(
+                            child_object["pk"], None
+                        )
 
                 revision.content_json = json.dumps(revision_content)
 
@@ -1160,7 +1223,9 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
             for field, value in update_attrs.items():
                 setattr(latest_revision, field, value)
 
-        latest_revision_as_page_revision = latest_revision.save_revision(user=user, changed=False)
+        latest_revision_as_page_revision = latest_revision.save_revision(
+            user=user, changed=False
+        )
         if keep_live:
             page_copy.live_revision = latest_revision_as_page_revision
             page_copy.last_published_at = latest_revision_as_page_revision.created_at
@@ -1168,7 +1233,9 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
             page_copy.save()
 
         # Log
-        logger.info("Page copied: \"%s\" id=%d from=%d", page_copy.title, page_copy.id, self.id)
+        logger.info(
+            'Page copied: "%s" id=%d from=%d', page_copy.title, page_copy.id, self.id
+        )
 
         # Copy child pages
         if recursive:
@@ -1178,7 +1245,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
                     to=page_copy,
                     copy_revisions=copy_revisions,
                     keep_live=keep_live,
-                    user=user
+                    user=user,
                 )
 
         return page_copy
@@ -1207,46 +1274,53 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
             url_info = urlparse(url)
             hostname = url_info.hostname
             path = url_info.path
-            port = url_info.port or (443 if url_info.scheme == 'https' else 80)
+            port = url_info.port or (443 if url_info.scheme == "https" else 80)
             scheme = url_info.scheme
         else:
             # Cannot determine a URL to this page - cobble one together based on
             # whatever we find in ALLOWED_HOSTS
             try:
                 hostname = settings.ALLOWED_HOSTS[0]
-                if hostname == '*':
+                if hostname == "*":
                     # '*' is a valid value to find in ALLOWED_HOSTS[0], but it's not a valid domain name.
                     # So we pretend it isn't there.
                     raise IndexError
             except IndexError:
-                hostname = 'localhost'
-            path = '/'
+                hostname = "localhost"
+            path = "/"
             port = 80
-            scheme = 'http'
+            scheme = "http"
 
         http_host = hostname
-        if port != (443 if scheme == 'https' else 80):
-            http_host = '%s:%s' % (http_host, port)
+        if port != (443 if scheme == "https" else 80):
+            http_host = "%s:%s" % (http_host, port)
         dummy_values = {
-            'REQUEST_METHOD': 'GET',
-            'PATH_INFO': path,
-            'SERVER_NAME': hostname,
-            'SERVER_PORT': port,
-            'SERVER_PROTOCOL': 'HTTP/1.1',
-            'HTTP_HOST': http_host,
-            'wsgi.version': (1, 0),
-            'wsgi.input': StringIO(),
-            'wsgi.errors': StringIO(),
-            'wsgi.url_scheme': scheme,
-            'wsgi.multithread': True,
-            'wsgi.multiprocess': True,
-            'wsgi.run_once': False,
+            "REQUEST_METHOD": "GET",
+            "PATH_INFO": path,
+            "SERVER_NAME": hostname,
+            "SERVER_PORT": port,
+            "SERVER_PROTOCOL": "HTTP/1.1",
+            "HTTP_HOST": http_host,
+            "wsgi.version": (1, 0),
+            "wsgi.input": StringIO(),
+            "wsgi.errors": StringIO(),
+            "wsgi.url_scheme": scheme,
+            "wsgi.multithread": True,
+            "wsgi.multiprocess": True,
+            "wsgi.run_once": False,
         }
 
         # Add important values from the original request object, if it was provided.
         HEADERS_FROM_ORIGINAL_REQUEST = [
-            'REMOTE_ADDR', 'HTTP_X_FORWARDED_FOR', 'HTTP_COOKIE', 'HTTP_USER_AGENT', 'HTTP_AUTHORIZATION',
-            'wsgi.version', 'wsgi.multithread', 'wsgi.multiprocess', 'wsgi.run_once',
+            "REMOTE_ADDR",
+            "HTTP_X_FORWARDED_FOR",
+            "HTTP_COOKIE",
+            "HTTP_USER_AGENT",
+            "HTTP_AUTHORIZATION",
+            "wsgi.version",
+            "wsgi.multithread",
+            "wsgi.multiprocess",
+            "wsgi.run_once",
         ]
         if settings.SECURE_PROXY_SSL_HEADER:
             HEADERS_FROM_ORIGINAL_REQUEST.append(settings.SECURE_PROXY_SSL_HEADER[0])
@@ -1270,7 +1344,7 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
 
         return request
 
-    DEFAULT_PREVIEW_MODES = [('', _('Default'))]
+    DEFAULT_PREVIEW_MODES = [("", _("Default"))]
 
     @property
     def preview_modes(self):
@@ -1320,15 +1394,15 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         """
         This returns a list of paths to invalidate in a frontend cache
         """
-        return ['/']
+        return ["/"]
 
     def get_sitemap_urls(self, request=None):
         return [
             {
-                'location': self.get_full_url(request),
+                "location": self.get_full_url(request),
                 # fall back on latest_revision_created_at if last_published_at is null
                 # (for backwards compatibility from before last_published_at was added)
-                'lastmod': (self.last_published_at or self.latest_revision_created_at),
+                "lastmod": (self.last_published_at or self.latest_revision_created_at),
             }
         ]
 
@@ -1338,12 +1412,12 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         Override this if you would like to create static versions of subpages
         """
         # Yield path for this page
-        yield '/'
+        yield "/"
 
         # Yield paths for child pages
         for child in self.get_children().live():
             for path in child.specific.get_static_site_paths():
-                yield '/' + child.slug + path
+                yield "/" + child.slug + path
 
     def get_ancestors(self, inclusive=False):
         return Page.objects.ancestor_of(self, inclusive)
@@ -1355,16 +1429,22 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         return Page.objects.sibling_of(self, inclusive)
 
     def get_next_siblings(self, inclusive=False):
-        return self.get_siblings(inclusive).filter(path__gte=self.path).order_by('path')
+        return self.get_siblings(inclusive).filter(path__gte=self.path).order_by("path")
 
     def get_prev_siblings(self, inclusive=False):
-        return self.get_siblings(inclusive).filter(path__lte=self.path).order_by('-path')
+        return (
+            self.get_siblings(inclusive).filter(path__lte=self.path).order_by("-path")
+        )
 
     def get_view_restrictions(self):
         """Return a query set of all page view restrictions that apply to this page"""
-        return PageViewRestriction.objects.filter(page__in=self.get_ancestors(inclusive=True))
+        return PageViewRestriction.objects.filter(
+            page__in=self.get_ancestors(inclusive=True)
+        )
 
-    password_required_template = getattr(settings, 'PASSWORD_REQUIRED_TEMPLATE', 'wagtailcore/password_required.html')
+    password_required_template = getattr(
+        settings, "PASSWORD_REQUIRED_TEMPLATE", "wagtailcore/password_required.html"
+    )
 
     def serve_password_required_response(self, request, form, action_url):
         """
@@ -1375,22 +1455,22 @@ class Page(AbstractPage, index.Indexed, ClusterableModel, metaclass=PageBase):
         action_url = URL that this form should be POSTed to
         """
         context = self.get_context(request)
-        context['form'] = form
-        context['action_url'] = action_url
+        context["form"] = form
+        context["action_url"] = action_url
         return TemplateResponse(request, self.password_required_template, context)
 
     class Meta:
-        verbose_name = _('page')
-        verbose_name_plural = _('pages')
+        verbose_name = _("page")
+        verbose_name_plural = _("pages")
 
 
 class Orderable(models.Model):
     sort_order = models.IntegerField(null=True, blank=True, editable=False)
-    sort_order_field = 'sort_order'
+    sort_order_field = "sort_order"
 
     class Meta:
         abstract = True
-        ordering = ['sort_order']
+        ordering = ["sort_order"]
 
 
 class SubmittedRevisionsManager(models.Manager):
@@ -1399,19 +1479,27 @@ class SubmittedRevisionsManager(models.Manager):
 
 
 class PageRevision(models.Model):
-    page = models.ForeignKey('Page', verbose_name=_('page'), related_name='revisions', on_delete=models.CASCADE)
+    page = models.ForeignKey(
+        "Page",
+        verbose_name=_("page"),
+        related_name="revisions",
+        on_delete=models.CASCADE,
+    )
     submitted_for_moderation = models.BooleanField(
-        verbose_name=_('submitted for moderation'),
-        default=False,
-        db_index=True
+        verbose_name=_("submitted for moderation"), default=False, db_index=True
     )
-    created_at = models.DateTimeField(db_index=True, verbose_name=_('created at'))
+    created_at = models.DateTimeField(db_index=True, verbose_name=_("created at"))
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, verbose_name=_('user'), null=True, blank=True,
-        on_delete=models.SET_NULL
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("user"),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
     )
-    content_json = models.TextField(verbose_name=_('content JSON'))
-    approved_go_live_at = models.DateTimeField(verbose_name=_('approved go live at'), null=True, blank=True)
+    content_json = models.TextField(verbose_name=_("content JSON"))
+    approved_go_live_at = models.DateTimeField(
+        verbose_name=_("approved go live at"), null=True, blank=True
+    )
 
     objects = models.Manager()
     submitted_revisions = SubmittedRevisionsManager()
@@ -1426,7 +1514,9 @@ class PageRevision(models.Model):
         super().save(*args, **kwargs)
         if self.submitted_for_moderation:
             # ensure that all other revisions of this page have the 'submitted for moderation' flag unset
-            self.page.revisions.exclude(id=self.id).update(submitted_for_moderation=False)
+            self.page.revisions.exclude(id=self.id).update(
+                submitted_for_moderation=False
+            )
 
     def as_page_object(self):
         obj = self.page.specific_class.from_json(self.content_json)
@@ -1456,22 +1546,36 @@ class PageRevision(models.Model):
 
     def approve_moderation(self):
         if self.submitted_for_moderation:
-            logger.info("Page moderation approved: \"%s\" id=%d revision_id=%d", self.page.title, self.page.id, self.id)
+            logger.info(
+                'Page moderation approved: "%s" id=%d revision_id=%d',
+                self.page.title,
+                self.page.id,
+                self.id,
+            )
             self.publish()
 
     def reject_moderation(self):
         if self.submitted_for_moderation:
-            logger.info("Page moderation rejected: \"%s\" id=%d revision_id=%d", self.page.title, self.page.id, self.id)
+            logger.info(
+                'Page moderation rejected: "%s" id=%d revision_id=%d',
+                self.page.title,
+                self.page.id,
+                self.id,
+            )
             self.submitted_for_moderation = False
-            self.save(update_fields=['submitted_for_moderation'])
+            self.save(update_fields=["submitted_for_moderation"])
 
     def is_latest_revision(self):
         if self.id is None:
             # special case: a revision without an ID is presumed to be newly-created and is thus
             # newer than any revision that might exist in the database
             return True
-        latest_revision = PageRevision.objects.filter(page_id=self.page_id).order_by('-created_at', '-id').first()
-        return (latest_revision == self)
+        latest_revision = (
+            PageRevision.objects.filter(page_id=self.page_id)
+            .order_by("-created_at", "-id")
+            .first()
+        )
+        return latest_revision == self
 
     def publish(self):
         page = self.as_page_object()
@@ -1513,16 +1617,23 @@ class PageRevision(models.Model):
         page.revisions.update(submitted_for_moderation=False)
 
         if page.live:
-            page_published.send(sender=page.specific_class, instance=page.specific, revision=self)
+            page_published.send(
+                sender=page.specific_class, instance=page.specific, revision=self
+            )
 
-            logger.info("Page published: \"%s\" id=%d revision_id=%d", page.title, page.id, self.id)
-        elif page.go_live_at:
             logger.info(
-                "Page scheduled for publish: \"%s\" id=%d revision_id=%d go_live_at=%s",
+                'Page published: "%s" id=%d revision_id=%d',
                 page.title,
                 page.id,
                 self.id,
-                page.go_live_at.isoformat()
+            )
+        elif page.go_live_at:
+            logger.info(
+                'Page scheduled for publish: "%s" id=%d revision_id=%d go_live_at=%s',
+                page.title,
+                page.id,
+                self.id,
+                page.go_live_at.isoformat(),
             )
 
     def get_previous(self):
@@ -1535,16 +1646,16 @@ class PageRevision(models.Model):
         return '"' + str(self.page) + '" at ' + str(self.created_at)
 
     class Meta:
-        verbose_name = _('page revision')
-        verbose_name_plural = _('page revisions')
+        verbose_name = _("page revision")
+        verbose_name_plural = _("page revisions")
 
 
 PAGE_PERMISSION_TYPES = [
-    ('add', _("Add"), _("Add/edit pages you own")),
-    ('edit', _("Edit"), _("Edit any page")),
-    ('publish', _("Publish"), _("Publish any page")),
-    ('bulk_delete', _("Bulk delete"), _("Delete pages with children")),
-    ('lock', _("Lock"), _("Lock/unlock any page")),
+    ("add", _("Add"), _("Add/edit pages you own")),
+    ("edit", _("Edit"), _("Edit any page")),
+    ("publish", _("Publish"), _("Publish any page")),
+    ("bulk_delete", _("Bulk delete"), _("Delete pages with children")),
+    ("lock", _("Lock"), _("Lock/unlock any page")),
 ]
 
 PAGE_PERMISSION_TYPE_CHOICES = [
@@ -1554,24 +1665,36 @@ PAGE_PERMISSION_TYPE_CHOICES = [
 
 
 class GroupPagePermission(models.Model):
-    group = models.ForeignKey(Group, verbose_name=_('group'), related_name='page_permissions', on_delete=models.CASCADE)
-    page = models.ForeignKey('Page', verbose_name=_('page'), related_name='group_permissions', on_delete=models.CASCADE)
+    group = models.ForeignKey(
+        Group,
+        verbose_name=_("group"),
+        related_name="page_permissions",
+        on_delete=models.CASCADE,
+    )
+    page = models.ForeignKey(
+        "Page",
+        verbose_name=_("page"),
+        related_name="group_permissions",
+        on_delete=models.CASCADE,
+    )
     permission_type = models.CharField(
-        verbose_name=_('permission type'),
+        verbose_name=_("permission type"),
         max_length=20,
-        choices=PAGE_PERMISSION_TYPE_CHOICES
+        choices=PAGE_PERMISSION_TYPE_CHOICES,
     )
 
     class Meta:
-        unique_together = ('group', 'page', 'permission_type')
-        verbose_name = _('group page permission')
-        verbose_name_plural = _('group page permissions')
+        unique_together = ("group", "page", "permission_type")
+        verbose_name = _("group page permission")
+        verbose_name_plural = _("group page permissions")
 
     def __str__(self):
         return "Group %d ('%s') has permission '%s' on page %d ('%s')" % (
-            self.group.id, self.group,
+            self.group.id,
+            self.group,
             self.permission_type,
-            self.page.id, self.page
+            self.page.id,
+            self.page,
         )
 
 
@@ -1583,7 +1706,9 @@ class UserPagePermissionsProxy:
         self.user = user
 
         if user.is_active and not user.is_superuser:
-            self.permissions = GroupPagePermission.objects.filter(group__user=self.user).select_related('page')
+            self.permissions = GroupPagePermission.objects.filter(
+                group__user=self.user
+            ).select_related("page")
 
     def revisions_for_moderation(self):
         """Return a queryset of page revisions awaiting moderation that this user has publish permission on"""
@@ -1596,7 +1721,9 @@ class UserPagePermissionsProxy:
 
         # get the list of pages for which they have direct publish permission
         # (i.e. they can publish any page within this subtree)
-        publishable_pages = [perm.page for perm in self.permissions if perm.permission_type == 'publish']
+        publishable_pages = [
+            perm.page for perm in self.permissions if perm.permission_type == "publish"
+        ]
         if not publishable_pages:
             return PageRevision.objects.none()
 
@@ -1624,12 +1751,14 @@ class UserPagePermissionsProxy:
 
         editable_pages = Page.objects.none()
 
-        for perm in self.permissions.filter(permission_type='add'):
+        for perm in self.permissions.filter(permission_type="add"):
             # user has edit permission on any subpage of perm.page
             # (including perm.page itself) that is owned by them
-            editable_pages |= Page.objects.descendant_of(perm.page, inclusive=True).filter(owner=self.user)
+            editable_pages |= Page.objects.descendant_of(
+                perm.page, inclusive=True
+            ).filter(owner=self.user)
 
-        for perm in self.permissions.filter(permission_type='edit'):
+        for perm in self.permissions.filter(permission_type="edit"):
             # user has edit permission on any subpage of perm.page
             # (including perm.page itself) regardless of owner
             editable_pages |= Page.objects.descendant_of(perm.page, inclusive=True)
@@ -1650,7 +1779,7 @@ class UserPagePermissionsProxy:
 
         publishable_pages = Page.objects.none()
 
-        for perm in self.permissions.filter(permission_type='publish'):
+        for perm in self.permissions.filter(permission_type="publish"):
             # user has publish permission on any subpage of perm.page
             # (including perm.page itself)
             publishable_pages |= Page.objects.descendant_of(perm.page, inclusive=True)
@@ -1671,7 +1800,8 @@ class PagePermissionTester:
 
         if self.user.is_active and not self.user.is_superuser:
             self.permissions = set(
-                perm.permission_type for perm in user_perms.permissions
+                perm.permission_type
+                for perm in user_perms.permissions
                 if self.page.path.startswith(perm.page.path)
             )
 
@@ -1681,23 +1811,27 @@ class PagePermissionTester:
         specific_class = self.page.specific_class
         if specific_class is None or not specific_class.creatable_subpage_models():
             return False
-        return self.user.is_superuser or ('add' in self.permissions)
+        return self.user.is_superuser or ("add" in self.permissions)
 
     def can_edit(self):
         if not self.user.is_active:
             return False
-        if self.page_is_root:  # root node is not a page and can never be edited, even by superusers
+        if (
+            self.page_is_root
+        ):  # root node is not a page and can never be edited, even by superusers
             return False
         return (
             self.user.is_superuser
-            or ('edit' in self.permissions)
-            or ('add' in self.permissions and self.page.owner_id == self.user.pk)
+            or ("edit" in self.permissions)
+            or ("add" in self.permissions and self.page.owner_id == self.user.pk)
         )
 
     def can_delete(self):
         if not self.user.is_active:
             return False
-        if self.page_is_root:  # root node is not a page and can never be deleted, even by superusers
+        if (
+            self.page_is_root
+        ):  # root node is not a page and can never be deleted, even by superusers
             return False
 
         if self.user.is_superuser:
@@ -1705,22 +1839,22 @@ class PagePermissionTester:
             return True
 
         # if the user does not have bulk_delete permission, they may only delete leaf pages
-        if 'bulk_delete' not in self.permissions and not self.page.is_leaf():
+        if "bulk_delete" not in self.permissions and not self.page.is_leaf():
             return False
 
-        if 'edit' in self.permissions:
+        if "edit" in self.permissions:
             # if the user does not have publish permission, we also need to confirm that there
             # are no published pages here
-            if 'publish' not in self.permissions:
+            if "publish" not in self.permissions:
                 pages_to_delete = self.page.get_descendants(inclusive=True)
                 if pages_to_delete.live().exists():
                     return False
 
             return True
 
-        elif 'add' in self.permissions:
+        elif "add" in self.permissions:
             pages_to_delete = self.page.get_descendants(inclusive=True)
-            if 'publish' in self.permissions:
+            if "publish" in self.permissions:
                 # we don't care about live state, but all pages must be owned by this user
                 # (i.e. eliminating pages owned by this user must give us the empty set)
                 return not pages_to_delete.exclude(owner=self.user).exists()
@@ -1740,7 +1874,7 @@ class PagePermissionTester:
         if self.page.locked:
             return False
 
-        return self.user.is_superuser or ('publish' in self.permissions)
+        return self.user.is_superuser or ("publish" in self.permissions)
 
     def can_publish(self):
         if not self.user.is_active:
@@ -1748,7 +1882,7 @@ class PagePermissionTester:
         if self.page_is_root:
             return False
 
-        return self.user.is_superuser or ('publish' in self.permissions)
+        return self.user.is_superuser or ("publish" in self.permissions)
 
     def can_set_view_restrictions(self):
         return self.can_publish()
@@ -1757,7 +1891,7 @@ class PagePermissionTester:
         return self.can_publish()
 
     def can_lock(self):
-        return self.user.is_superuser or ('lock' in self.permissions)
+        return self.user.is_superuser or ("lock" in self.permissions)
 
     def can_publish_subpage(self):
         """
@@ -1772,7 +1906,7 @@ class PagePermissionTester:
         if specific_class is None or not specific_class.creatable_subpage_models():
             return False
 
-        return self.user.is_superuser or ('publish' in self.permissions)
+        return self.user.is_superuser or ("publish" in self.permissions)
 
     def can_reorder_children(self):
         """
@@ -1816,12 +1950,12 @@ class PagePermissionTester:
         destination_perms = self.user_perms.for_page(destination)
 
         # we always need at least add permission in the target
-        if 'add' not in destination_perms.permissions:
+        if "add" not in destination_perms.permissions:
             return False
 
         if self.page.live or self.page.get_descendants().filter(live=True).exists():
             # moving this page will entail publishing within the destination section
-            return ('publish' in destination_perms.permissions)
+            return "publish" in destination_perms.permissions
         else:
             # no publishing required, so the already-tested 'add' permission is sufficient
             return True
@@ -1829,7 +1963,9 @@ class PagePermissionTester:
     def can_copy_to(self, destination, recursive=False):
         # reject the logically impossible cases first
         # recursive can't copy to the same tree otherwise it will be on infinite loop
-        if recursive and (self.page == destination or destination.is_descendant_of(self.page)):
+        if recursive and (
+            self.page == destination or destination.is_descendant_of(self.page)
+        ):
             return False
 
         # shortcut the trivial 'everything' / 'nothing' permissions
@@ -1845,7 +1981,7 @@ class PagePermissionTester:
             return False
 
         # we always need at least add permission in the target
-        if 'add' not in destination_perms.permissions:
+        if "add" not in destination_perms.permissions:
             return False
 
         return True
@@ -1855,10 +1991,10 @@ class PagePermissionTester:
 
 
 class BaseViewRestriction(models.Model):
-    NONE = 'none'
-    PASSWORD = 'password'
-    GROUPS = 'groups'
-    LOGIN = 'login'
+    NONE = "none"
+    PASSWORD = "password"
+    GROUPS = "groups"
+    LOGIN = "login"
 
     RESTRICTION_CHOICES = (
         (NONE, _("Public")),
@@ -1867,14 +2003,15 @@ class BaseViewRestriction(models.Model):
         (GROUPS, _("Private, accessible to users in specific groups")),
     )
 
-    restriction_type = models.CharField(
-        max_length=20, choices=RESTRICTION_CHOICES)
-    password = models.CharField(verbose_name=_('password'), max_length=255, blank=True)
-    groups = models.ManyToManyField(Group, verbose_name=_('groups'), blank=True)
+    restriction_type = models.CharField(max_length=20, choices=RESTRICTION_CHOICES)
+    password = models.CharField(verbose_name=_("password"), max_length=255, blank=True)
+    groups = models.ManyToManyField(Group, verbose_name=_("groups"), blank=True)
 
     def accept_request(self, request):
         if self.restriction_type == BaseViewRestriction.PASSWORD:
-            passed_restrictions = request.session.get(self.passed_view_restrictions_session_key, [])
+            passed_restrictions = request.session.get(
+                self.passed_view_restrictions_session_key, []
+            )
             if self.id not in passed_restrictions:
                 return False
 
@@ -1896,11 +2033,15 @@ class BaseViewRestriction(models.Model):
         Update the session data in the request to mark the user as having passed this
         view restriction
         """
-        has_existing_session = (settings.SESSION_COOKIE_NAME in request.COOKIES)
-        passed_restrictions = request.session.setdefault(self.passed_view_restrictions_session_key, [])
+        has_existing_session = settings.SESSION_COOKIE_NAME in request.COOKIES
+        passed_restrictions = request.session.setdefault(
+            self.passed_view_restrictions_session_key, []
+        )
         if self.id not in passed_restrictions:
             passed_restrictions.append(self.id)
-            request.session[self.passed_view_restrictions_session_key] = passed_restrictions
+            request.session[
+                self.passed_view_restrictions_session_key
+            ] = passed_restrictions
         if not has_existing_session:
             # if this is a session we've created, set it to expire at the end
             # of the browser session
@@ -1908,25 +2049,28 @@ class BaseViewRestriction(models.Model):
 
     class Meta:
         abstract = True
-        verbose_name = _('view restriction')
-        verbose_name_plural = _('view restrictions')
+        verbose_name = _("view restriction")
+        verbose_name_plural = _("view restrictions")
 
 
 class PageViewRestriction(BaseViewRestriction):
     page = models.ForeignKey(
-        'Page', verbose_name=_('page'), related_name='view_restrictions', on_delete=models.CASCADE
+        "Page",
+        verbose_name=_("page"),
+        related_name="view_restrictions",
+        on_delete=models.CASCADE,
     )
 
-    passed_view_restrictions_session_key = 'passed_page_view_restrictions'
+    passed_view_restrictions_session_key = "passed_page_view_restrictions"
 
     class Meta:
-        verbose_name = _('page view restriction')
-        verbose_name_plural = _('page view restrictions')
+        verbose_name = _("page view restriction")
+        verbose_name_plural = _("page view restrictions")
 
 
 class BaseCollectionManager(models.Manager):
     def get_queryset(self):
-        return TreeQuerySet(self.model).order_by('path')
+        return TreeQuerySet(self.model).order_by("path")
 
 
 CollectionManager = BaseCollectionManager.from_queryset(TreeQuerySet)
@@ -1934,24 +2078,25 @@ CollectionManager = BaseCollectionManager.from_queryset(TreeQuerySet)
 
 class CollectionViewRestriction(BaseViewRestriction):
     collection = models.ForeignKey(
-        'Collection',
-        verbose_name=_('collection'),
-        related_name='view_restrictions',
-        on_delete=models.CASCADE
+        "Collection",
+        verbose_name=_("collection"),
+        related_name="view_restrictions",
+        on_delete=models.CASCADE,
     )
 
-    passed_view_restrictions_session_key = 'passed_collection_view_restrictions'
+    passed_view_restrictions_session_key = "passed_collection_view_restrictions"
 
     class Meta:
-        verbose_name = _('collection view restriction')
-        verbose_name_plural = _('collection view restrictions')
+        verbose_name = _("collection view restriction")
+        verbose_name_plural = _("collection view restrictions")
 
 
 class Collection(MP_Node):
     """
     A location in which resources such as images and documents can be grouped
     """
-    name = models.CharField(max_length=255, verbose_name=_('name'))
+
+    name = models.CharField(max_length=255, verbose_name=_("name"))
 
     objects = CollectionManager()
 
@@ -1968,26 +2113,28 @@ class Collection(MP_Node):
         return Collection.objects.sibling_of(self, inclusive)
 
     def get_next_siblings(self, inclusive=False):
-        return self.get_siblings(inclusive).filter(path__gte=self.path).order_by('path')
+        return self.get_siblings(inclusive).filter(path__gte=self.path).order_by("path")
 
     def get_prev_siblings(self, inclusive=False):
-        return self.get_siblings(inclusive).filter(path__lte=self.path).order_by('-path')
+        return (
+            self.get_siblings(inclusive).filter(path__lte=self.path).order_by("-path")
+        )
 
     def get_view_restrictions(self):
         """Return a query set of all collection view restrictions that apply to this collection"""
-        return CollectionViewRestriction.objects.filter(collection__in=self.get_ancestors(inclusive=True))
+        return CollectionViewRestriction.objects.filter(
+            collection__in=self.get_ancestors(inclusive=True)
+        )
 
     @staticmethod
     def order_for_display(queryset):
         return queryset.annotate(
-            display_order=Case(
-                When(depth=1, then=Value('')),
-                default='name')
-        ).order_by('display_order')
+            display_order=Case(When(depth=1, then=Value("")), default="name")
+        ).order_by("display_order")
 
     class Meta:
-        verbose_name = _('collection')
-        verbose_name_plural = _('collections')
+        verbose_name = _("collection")
+        verbose_name_plural = _("collections")
 
 
 def get_root_collection_id():
@@ -1998,17 +2145,16 @@ class CollectionMember(models.Model):
     """
     Base class for models that are categorised into collections
     """
+
     collection = models.ForeignKey(
         Collection,
         default=get_root_collection_id,
-        verbose_name=_('collection'),
-        related_name='+',
-        on_delete=models.CASCADE
+        verbose_name=_("collection"),
+        related_name="+",
+        on_delete=models.CASCADE,
     )
 
-    search_fields = [
-        index.FilterField('collection'),
-    ]
+    search_fields = [index.FilterField("collection")]
 
     class Meta:
         abstract = True
@@ -2019,32 +2165,33 @@ class GroupCollectionPermission(models.Model):
     A rule indicating that a group has permission for some action (e.g. "create document")
     within a specified collection.
     """
+
     group = models.ForeignKey(
         Group,
-        verbose_name=_('group'),
-        related_name='collection_permissions',
-        on_delete=models.CASCADE
+        verbose_name=_("group"),
+        related_name="collection_permissions",
+        on_delete=models.CASCADE,
     )
     collection = models.ForeignKey(
         Collection,
-        verbose_name=_('collection'),
-        related_name='group_permissions',
-        on_delete=models.CASCADE
+        verbose_name=_("collection"),
+        related_name="group_permissions",
+        on_delete=models.CASCADE,
     )
     permission = models.ForeignKey(
-        Permission,
-        verbose_name=_('permission'),
-        on_delete=models.CASCADE
+        Permission, verbose_name=_("permission"), on_delete=models.CASCADE
     )
 
     def __str__(self):
         return "Group %d ('%s') has permission '%s' on collection %d ('%s')" % (
-            self.group.id, self.group,
+            self.group.id,
+            self.group,
             self.permission,
-            self.collection.id, self.collection
+            self.collection.id,
+            self.collection,
         )
 
     class Meta:
-        unique_together = ('group', 'collection', 'permission')
-        verbose_name = _('group collection permission')
-        verbose_name_plural = _('group collection permissions')
+        unique_together = ("group", "collection", "permission")
+        verbose_name = _("group collection permission")
+        verbose_name_plural = _("group collection permissions")

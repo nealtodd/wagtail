@@ -1,14 +1,20 @@
 import re
 from collections import Mapping
 
-ELEMENT_SELECTOR = re.compile(r'^([\w-]+)$')
-ELEMENT_WITH_ATTR_SELECTOR = re.compile(r'^([\w-]+)\[([\w-]+)\]$')
-ELEMENT_WITH_ATTR_EXACT_SINGLE_QUOTE_SELECTOR = re.compile(r"^([\w-]+)\[([\w-]+)='(.*)'\]$")
-ELEMENT_WITH_ATTR_EXACT_DOUBLE_QUOTE_SELECTOR = re.compile(r'^([\w-]+)\[([\w-]+)="(.*)"\]$')
-ELEMENT_WITH_ATTR_EXACT_UNQUOTED_SELECTOR = re.compile(r"^([\w-]+)\[([\w-]+)=([\w-]+)\]$")
+ELEMENT_SELECTOR = re.compile(r"^([\w-]+)$")
+ELEMENT_WITH_ATTR_SELECTOR = re.compile(r"^([\w-]+)\[([\w-]+)\]$")
+ELEMENT_WITH_ATTR_EXACT_SINGLE_QUOTE_SELECTOR = re.compile(
+    r"^([\w-]+)\[([\w-]+)='(.*)'\]$"
+)
+ELEMENT_WITH_ATTR_EXACT_DOUBLE_QUOTE_SELECTOR = re.compile(
+    r'^([\w-]+)\[([\w-]+)="(.*)"\]$'
+)
+ELEMENT_WITH_ATTR_EXACT_UNQUOTED_SELECTOR = re.compile(
+    r"^([\w-]+)\[([\w-]+)=([\w-]+)\]$"
+)
 
 
-class HTMLRuleset():
+class HTMLRuleset:
     """
     Maintains a set of rules for matching HTML elements.
     Each rule defines a mapping from a CSS-like selector to an arbitrary result object.
@@ -18,6 +24,7 @@ class HTMLRuleset():
     'a[href]' = matches any <a> element with an 'href' attribute
     'a[linktype="page"]' = matches any <a> element with a 'linktype' attribute equal to 'page'
     """
+
     def __init__(self, rules=None):
         # mapping of element name to a list of (attr_check, result) tuples
         # where attr_check is a callable that takes an attr dict and returns True if they match
@@ -36,9 +43,7 @@ class HTMLRuleset():
 
     def _add_element_rule(self, name, result):
         # add a rule that matches on any element with name `name`
-        self.element_rules.setdefault(name, []).append(
-            ((lambda attrs: True), result)
-        )
+        self.element_rules.setdefault(name, []).append(((lambda attrs: True), result))
 
     def _add_element_with_attr_rule(self, name, attr, result):
         # add a rule that matches any element with name `name` which has the attribute `attr`
@@ -69,7 +74,7 @@ class HTMLRuleset():
         for regex in (
             ELEMENT_WITH_ATTR_EXACT_SINGLE_QUOTE_SELECTOR,
             ELEMENT_WITH_ATTR_EXACT_DOUBLE_QUOTE_SELECTOR,
-            ELEMENT_WITH_ATTR_EXACT_UNQUOTED_SELECTOR
+            ELEMENT_WITH_ATTR_EXACT_UNQUOTED_SELECTOR,
         ):
             match = regex.match(selector)
             if match:

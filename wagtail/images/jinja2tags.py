@@ -6,7 +6,7 @@ from .templatetags.wagtailimages_tags import image_url
 
 def image(image, filterspec, **attrs):
     if not image:
-        return ''
+        return ""
 
     rendition = get_rendition_or_not_found(image, filterspec)
 
@@ -20,10 +20,7 @@ class WagtailImagesExtension(Extension):
     def __init__(self, environment):
         super().__init__(environment)
 
-        self.environment.globals.update({
-            'image': image,
-            'image_url': image_url,
-        })
+        self.environment.globals.update({"image": image, "image_url": image_url})
 
 
 # Nicer import names

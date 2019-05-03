@@ -5,6 +5,7 @@ from collections import namedtuple
 # Implementation of TestCase.assertLogs for pre-3.4 Python versions.
 # Borrowed from https://github.com/django/django/pull/3467/commits/1b4f10963628bb68246c193f1124a1f7b6e4c696
 
+
 class _BaseTestCaseContext:
     def __init__(self, test_case):
         self.test_case = test_case
@@ -45,7 +46,7 @@ class _AssertLogsContext(_BaseTestCaseContext):
         _BaseTestCaseContext.__init__(self, test_case)
         self.logger_name = logger_name
         if level:
-            if getattr(logging, '_nameToLevel', False):
+            if getattr(logging, "_nameToLevel", False):
                 self.level = logging._nameToLevel.get(level, level)
             else:
                 self.level = logging._levelNames.get(level, level)
@@ -79,5 +80,7 @@ class _AssertLogsContext(_BaseTestCaseContext):
             return False
         if len(self.watcher.records) == 0:
             self._raiseFailure(
-                "no logs of level {} or higher triggered on {}"
-                .format(logging.getLevelName(self.level), self.logger.name))
+                "no logs of level {} or higher triggered on {}".format(
+                    logging.getLevelName(self.level), self.logger.name
+                )
+            )

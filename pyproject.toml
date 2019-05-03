@@ -1,0 +1,10 @@
+[tool.black]
+safe = true
+py36 = true
+exclude = '''
+/(
+  node_modules
+  | migrations
+  | __pycache__
+)/
+'''

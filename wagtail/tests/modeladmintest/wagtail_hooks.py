@@ -1,5 +1,9 @@
 from wagtail.contrib.modeladmin.options import (
-    ModelAdmin, ModelAdminGroup, ThumbnailMixin, modeladmin_register)
+    ModelAdmin,
+    ModelAdminGroup,
+    ThumbnailMixin,
+    modeladmin_register,
+)
 from wagtail.contrib.modeladmin.views import CreateView
 from wagtail.tests.testapp.models import BusinessChild, EventPage, SingleEventPage
 
@@ -10,57 +14,52 @@ from .models import Author, Book, Publisher, Token, VenuePage
 class AuthorModelAdmin(ModelAdmin):
     model = Author
     menu_order = 200
-    list_display = ('name', 'first_book', 'last_book', 'date_of_birth')
-    list_filter = ('date_of_birth', )
-    search_fields = ('name', )
+    list_display = ("name", "first_book", "last_book", "date_of_birth")
+    list_filter = ("date_of_birth",)
+    search_fields = ("name",)
     inspect_view_enabled = True
-    inspect_view_fields = ('name', )
+    inspect_view_fields = ("name",)
 
     def last_book(self, obj):
         # For testing use of modeladmin methods in list_display
         book = obj.book_set.last()
         if book:
             return book.title
-        return ''
+        return ""
 
     def get_extra_class_names_for_field_col(self, obj, field_name):
-        class_names = super(
-            AuthorModelAdmin, self
-        ).get_extra_class_names_for_field_col(field_name, obj)
-        if field_name == 'first_book':
-            class_names.append('for-author-%s' % obj.pk)
+        class_names = super(AuthorModelAdmin, self).get_extra_class_names_for_field_col(
+            field_name, obj
+        )
+        if field_name == "first_book":
+            class_names.append("for-author-%s" % obj.pk)
         return class_names
 
     def get_extra_attrs_for_field_col(self, obj, field_name):
-        attrs = super().get_extra_attrs_for_field_col(
-            field_name, obj
-        )
-        if field_name == 'last_book':
-            attrs['data-for_author'] = obj.id
+        attrs = super().get_extra_attrs_for_field_col(field_name, obj)
+        if field_name == "last_book":
+            attrs["data-for_author"] = obj.id
         return attrs
 
 
 class BookModelAdmin(ThumbnailMixin, ModelAdmin):
     model = Book
     menu_order = 300
-    list_display = ('title', 'author', 'admin_thumb')
-    list_filter = ('author', )
-    ordering = ('title', )
-    search_fields = ('title', )
+    list_display = ("title", "author", "admin_thumb")
+    list_filter = ("author",)
+    ordering = ("title",)
+    search_fields = ("title",)
     inspect_view_enabled = True
-    inspect_view_fields_exclude = ('title', )
-    thumb_image_field_name = 'cover_image'
+    inspect_view_fields_exclude = ("title",)
+    thumb_image_field_name = "cover_image"
 
     def get_extra_attrs_for_row(self, obj, context):
-        return {
-            'data-author-yob': obj.author.date_of_birth.year,
-            'class': 'book',
-        }
+        return {"data-author-yob": obj.author.date_of_birth.year, "class": "book"}
 
 
 class TokenModelAdmin(ModelAdmin):
     model = Token
-    list_display = ('key',)
+    list_display = ("key",)
 
 
 class PublisherCreateView(CreateView):
@@ -75,11 +74,11 @@ class PublisherModelAdmin(ModelAdmin):
 
 class EventPageAdmin(ModelAdmin):
     model = EventPage
-    list_display = ('title', 'date_from', 'audience')
-    list_filter = ('audience', )
-    search_fields = ('title', )
+    list_display = ("title", "date_from", "audience")
+    list_filter = ("audience",)
+    search_fields = ("title",)
     inspect_view_enabled = True
-    inspect_view_fields_exclude = ('feed_image', )
+    inspect_view_fields_exclude = ("feed_image",)
 
 
 class SingleEventPageAdmin(EventPageAdmin):

@@ -15,6 +15,7 @@ class TreeQuerySet(MP_NodeQuerySet):
     """
     Extends Treebeard's MP_NodeQuerySet with additional useful tree-related operations.
     """
+
     def descendant_of_q(self, other, inclusive=False):
         q = Q(path__startswith=other.path) & Q(depth__gte=other.depth)
 
@@ -98,7 +99,9 @@ class TreeQuerySet(MP_NodeQuerySet):
         return self.exclude(self.parent_of_q(other))
 
     def sibling_of_q(self, other, inclusive=True):
-        q = Q(path__startswith=self.model._get_parent_path_from_path(other.path)) & Q(depth=other.depth)
+        q = Q(path__startswith=self.model._get_parent_path_from_path(other.path)) & Q(
+            depth=other.depth
+        )
 
         if not inclusive:
             q &= ~Q(pk=other.pk)
@@ -173,10 +176,9 @@ class PageQuerySet(SearchableQuerySetMixin, TreeQuerySet):
         return self.exclude(self.page_q(other))
 
     def type_q(self, klass):
-        content_types = ContentType.objects.get_for_models(*[
-            model for model in apps.get_models()
-            if issubclass(model, klass)
-        ]).values()
+        content_types = ContentType.objects.get_for_models(
+            *[model for model in apps.get_models() if issubclass(model, klass)]
+        ).values()
 
         return Q(content_type__in=list(content_types))
 
@@ -284,22 +286,29 @@ class PageQuerySet(SearchableQuerySetMixin, TreeQuerySet):
         # An empty queryset has no ancestors. This is a problem
         if not self.exists():
             if strict:
-                raise self.model.DoesNotExist('Can not find ancestor of empty queryset')
+                raise self.model.DoesNotExist("Can not find ancestor of empty queryset")
             return self.model.get_first_root_node()
 
         if include_self:
             # Get all the paths of the matched pages.
-            paths = self.order_by().values_list('path', flat=True)
+            paths = self.order_by().values_list("path", flat=True)
         else:
             # Find all the distinct parent paths of all matched pages.
             # The empty `.order_by()` ensures that `Page.path` is not also
             # selected to order the results, which makes `.distinct()` works.
-            paths = self.order_by()\
-                .annotate(parent_path=Substr(
-                    'path', 1, Length('path') - self.model.steplen,
-                    output_field=CharField(max_length=255)))\
-                .values_list('parent_path', flat=True)\
+            paths = (
+                self.order_by()
+                .annotate(
+                    parent_path=Substr(
+                        "path",
+                        1,
+                        Length("path") - self.model.steplen,
+                        output_field=CharField(max_length=255),
+                    )
+                )
+                .values_list("parent_path", flat=True)
                 .distinct()
+            )
 
         # This method works on anything, not just file system paths.
         common_parent_path = posixpath.commonprefix(paths)
@@ -311,12 +320,12 @@ class PageQuerySet(SearchableQuerySetMixin, TreeQuerySet):
         if extra_chars != 0:
             common_parent_path = common_parent_path[:-extra_chars]
 
-        if common_parent_path == '':
+        if common_parent_path == "":
             # This should only happen when there are multiple trees,
             # a situation that Wagtail does not support;
             # or when the root node itself is part of the queryset.
             if strict:
-                raise self.model.DoesNotExist('No common ancestor found!')
+                raise self.model.DoesNotExist("No common ancestor found!")
 
             # Assuming the situation is the latter, just return the root node.
             # The root node is not its own ancestor, so this is technically
@@ -367,14 +376,13 @@ def specific_iterator(qs, defer=False):
 
     This should be called from ``PageQuerySet.specific``
     """
-    pks_and_types = qs.values_list('pk', 'content_type')
+    pks_and_types = qs.values_list("pk", "content_type")
     pks_by_type = defaultdict(list)
     for pk, content_type in pks_and_types:
         pks_by_type[content_type].append(pk)
 
     # Content types are cached by ID, so this will not run any queries.
-    content_types = {pk: ContentType.objects.get_for_id(pk)
-                     for _, pk in pks_and_types}
+    content_types = {pk: ContentType.objects.get_for_id(pk) for _, pk in pks_and_types}
 
     # Get the specific instances of all pages, one model class at a time.
     pages_by_type = {}
@@ -387,7 +395,10 @@ def specific_iterator(qs, defer=False):
         if defer:
             # Defer all specific fields
             from wagtail.core.models import Page
-            fields = [field.attname for field in Page._meta.get_fields() if field.concrete]
+
+            fields = [
+                field.attname for field in Page._meta.get_fields() if field.concrete
+            ]
             pages = pages.only(*fields)
 
         pages_by_type[content_type] = {page.pk: page for page in pages}

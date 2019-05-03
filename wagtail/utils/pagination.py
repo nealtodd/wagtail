@@ -3,7 +3,7 @@ from urllib.parse import parse_qs
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.utils.http import urlencode
 
-DEFAULT_PAGE_KEY = 'p'
+DEFAULT_PAGE_KEY = "p"
 
 
 def paginate(request, items, page_key=DEFAULT_PAGE_KEY, per_page=20):

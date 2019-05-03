@@ -6,7 +6,7 @@ import re
 
 def indent(string, depth=1):
     """indent all non-empty lines of string by 'depth' 4-character tabs"""
-    return re.sub(r'(^|\n)([^\n]+)', r'\g<1>' + ('    ' * depth) + r'\g<2>', string)
+    return re.sub(r"(^|\n)([^\n]+)", r"\g<1>" + ("    " * depth) + r"\g<2>", string)
 
 
 def js_dict(d):
@@ -16,8 +16,5 @@ def js_dict(d):
     values are assumed to be valid Javascript expressions and will be neither escaped nor quoted (but will be
     wrapped in parentheses, in case some awkward git decides to use the comma operator...)
     """
-    dict_items = [
-        indent("'%s': (%s)" % (k, v))
-        for (k, v) in d.items()
-    ]
-    return "{\n%s\n}" % ',\n'.join(dict_items)
+    dict_items = [indent("'%s': (%s)" % (k, v)) for (k, v) in d.items()]
+    return "{\n%s\n}" % ",\n".join(dict_items)
